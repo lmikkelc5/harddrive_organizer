@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.pytest-symlink-probe/
+build/
+dist/
+*.spec.bak
+
+# Test drives may hold real photos dropped in by hand. Never commit them.
+test-drives/
