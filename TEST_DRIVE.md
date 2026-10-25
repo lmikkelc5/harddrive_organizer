@@ -12,7 +12,7 @@ Expected results below follow `CLAUDE.md`. If an expectation here conflicts with
 > - Videos are made by the **built-in MP4/MOV writer** (`photo_organizer/testdrive/media.py`), not ffmpeg, so video scenarios always run. The files aren't playable, but the organizer only reads their metadata.
 > - The "still copying" file gets a modified time **in the future**, so it stays inside the 15-second window however long you wait before running.
 
-**Status:** step 1 is done (`make`, `check`, `date-basic`, `edge`). Steps 2–6 are next.
+**Status:** all six steps are built. `python -m photo_organizer.testdrive full <folder>` runs everything in one go, and CI runs it on every push (and again against the built Mac app).
 
 ---
 
@@ -26,7 +26,8 @@ All under `python -m photo_organizer.testdrive`:
 | `make <folder> --big 5000` | Same layout, plus 5,000 plain phone-style photos (EXIF dates spread over 2015–2025), for timing a first big import. |
 | `check <folder> [--phase first-run\|after-edit] [--feature X]` | Compares the drive to `expected.json`. Prints one ✓/✗ line per file, grouped by feature, then a summary. Exits non-zero on any failure. |
 | `edit <folder>` | Simulates Mom rearranging things after the first run, and drops a second small batch into the inbox (see Phase 2). |
-| `snapshot <folder>` | Prints a list of every path + hash, used for the "second run changes nothing" check. |
+| `snapshot <folder> [--save FILE] [--compare FILE]` | Prints a list of every path + hash, used for the "second run changes nothing" check. `--compare` diffs against a saved snapshot. |
+| `full <folder> [--app BINARY] [--big N]` | The whole sequence: make → organize → check → organize again (nothing may change) → edit → organize → check after-edit → organize again. `--app` runs a built app binary instead of the Python package. |
 
 Run the organizer in between with `python -m photo_organizer --drive <folder> --timezone America/Los_Angeles`. `make` prints the exact command.
 
@@ -89,7 +90,7 @@ One entry per generated file:
 
 Paths are relative to `Put New Photos Here/` (input) and `My Photos/` (expected), unless they start with `.photo-organizer/`.
 
-### `date-basic` ✅ built
+### `date-basic`
 | Input | Setup | Expected |
 |---|---|---|
 | `IMG_0001.JPG` | EXIF 2024-07-14 15:30:22 | `By Date/2024/2024-07-14_15-30-22.jpg` |
@@ -159,7 +160,7 @@ Albums: `Albums/Old Laptop/` exists. There is **no** `Albums/2004` and **no** `A
 | `TRIP - Hawaii 2009/DATE - June 2009/h_1–2.jpg` | camera EXIF 2013 | `By Date/2009/2009-06 h_1.jpg` + `By Trip/Hawaii 2009/` |
 | `DATE - a long time ago/lt_1.jpg` | no EXIF | `Unsorted/Date Unknown/DATE - a long time ago/lt_1.jpg`; the run summary mentions the unreadable date; no `By Date/<label>` view is created |
 
-### `edge` ✅ built
+### `edge`
 | Input | Setup | Expected |
 |---|---|---|
 | `IMG_0001 copy.JPG` | exact same bytes as `IMG_0001.JPG` | `Duplicates (safe to delete)/` |
@@ -179,7 +180,7 @@ Albums: `Albums/Old Laptop/` exists. There is **no** `Albums/2004` and **no** `A
 |---|---|
 | Move `Unsorted/Date Unknown/photo.jpg` into `By Date/2010/` | stays there; catalog date 2010, precision year, source manual |
 | Move another Unsorted photo into a month folder she made, `By Date/2010/03 - March/` | stays there; catalog date March 2010, precision month, source manual |
-| Drag the whole `Unsorted/Probably 2011/Camping` folder into `By Date/2011/` | files stay in `By Date/2011/Camping/`, dated 2011 (nearest year folder) |
+| Drag the whole `Unsorted/Probably 2011/Camping` folder into `By Date/2011/` | files stay in `By Date/2011/Camping/`, dated 2011 (nearest year folder); the guess is cleared because she confirmed it |
 | Rename `By Trip/Hawaii 2026` → `Maui 2026` | stays `Maui 2026`, links intact, and `Hawaii 2026` is **not** recreated |
 | Delete one Christmas 2025 photo from `By Date` | its link disappears from `By Event/Christmas 2025/`; catalog status missing; no error |
 | Move `By Date/2022/<recipe photo>` into `By Trip/Maui 2026/` | moved back to its By Date spot; link added in `Maui 2026` |
@@ -201,7 +202,7 @@ Albums: `Albums/Old Laptop/` exists. There is **no** `Albums/2004` and **no** `A
 ## pytest end-to-end
 
 `tests/test_testdrive_e2e.py`:
-1. Generate into `tmp_path`, run the organizer, assert phase 1. ✅
+1. Generate into `tmp_path` (with `--big 50`), run the organizer, assert phase 1.
 2. Assert idempotency.
 3. Run `edit`, run the organizer, assert phase 2, then assert idempotency again.
 
@@ -223,10 +224,10 @@ Unbuilt features are `xfail` (pending), not skipped silently. The macOS-only and
 ## Order of work
 
 1. ✅ Generator + `expected.json` for `date-basic` and `edge`, and the `check` command.
-2. Add the remaining phase 1 scenarios, marking unbuilt features as pending.
-3. `snapshot` + the idempotency check.
-4. `edit` + phase 2.
-5. `--big`.
-6. The pytest e2e test and wiring it into CI. (The phase 1 test is already wired in.)
+2. ✅ The remaining phase 1 scenarios.
+3. ✅ `snapshot` + the idempotency check.
+4. ✅ `edit` + phase 2.
+5. ✅ `--big`. (5,000 photos sort in about 16 s on the dev PC.)
+6. ✅ The pytest e2e test and CI.
 
 Show me `check` output after step 1 so I can see the format before you go further.

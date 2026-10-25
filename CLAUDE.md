@@ -300,6 +300,9 @@ Wrap the entire run in a top-level handler, so no exception ever reaches her as 
 - **Group-word plurals:** `Trips` → `Trip`, `Events` → `Event`, but words ending in `ss/as/is/us/os` (`Christmas`) are left alone.
 - **When two inbox files are identical,** the one named like a copy (`IMG_1 copy.JPG`, `IMG_1 (1).JPG`) is the one moved to Duplicates.
 - **A copy of an already-cataloged photo dragged into a view folder** gets the label and is moved to Duplicates.
+- **Loose files at the top of the inbox get no "pile" guesses.** The majority year and modified times of a mixed pile say nothing about one photo, so only sequential camera neighbors can produce a Probably guess there. Real folders get all three hints.
+- **A file she drops straight into a By Date year folder** is dated by the folder, but if its own metadata date is trustworthy and fits that folder, the precise date is kept. This also recovers a file whose catalog record was lost (e.g. a power cut mid-import).
+- **The catalog uses SQLite WAL mode** (`synchronous = NORMAL`). It still commits after every moved file; WAL makes that about 4x faster on big imports.
 - **App name** `Organize Photos`, bundle id `com.mikkel.organizephotos`, folder names as above. No icon yet.
 - **Local dev machine:** Windows Smart App Control blocks the uv-downloaded Python 3.12 and pillow-heif's DLL, so local development uses Python 3.14 (code must stay 3.12-compatible; CI runs 3.12). HEIC and symlink tests skip locally and run in CI.
 

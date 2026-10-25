@@ -35,9 +35,16 @@ python -m photo_organizer --drive <folder> [--dry-run] [--verbose] [--timezone A
 ### Test drive
 
 ```bash
+python -m photo_organizer.testdrive full test-drives/full          # everything, both phases
+python -m photo_organizer.testdrive full test-drives/big --big 5000  # plus a 5,000-photo import
+
+# or step by step:
 python -m photo_organizer.testdrive make test-drives/one --reset
 python -m photo_organizer --drive test-drives/one --timezone America/Los_Angeles
 python -m photo_organizer.testdrive check test-drives/one
+python -m photo_organizer.testdrive edit test-drives/one
+python -m photo_organizer --drive test-drives/one --timezone America/Los_Angeles
+python -m photo_organizer.testdrive check test-drives/one --phase after-edit
 ```
 
 `test-drives/` is git-ignored, so real photos dropped into a test inbox never get committed. `make --reset` refuses to wipe any folder that has no `expected.json`.
@@ -45,7 +52,8 @@ python -m photo_organizer.testdrive check test-drives/one
 ### Things that skip on this Windows PC (and run in CI)
 
 - **Link folders** (By Trip, By Event, Albums) need symlinks. Windows only allows them with Developer Mode on, so those tests skip locally. They run on the macOS and Windows CI runners.
-- **HEIC:** Windows Smart App Control blocks pillow-heif's DLL here, so HEIC tests and scenarios skip locally. It also blocks Python builds downloaded by `uv`, which is why local development uses the installed Python 3.14. CI uses Python 3.12, and the code avoids anything newer than 3.12.
+- **The `DATE - 7:4:2009` scenario** needs a Mac, because Windows doesn't allow `:` in folder names.
+- **Python 3.12:** Windows Smart App Control blocked the Python builds downloaded by `uv`, so local development uses the installed Python 3.14. CI uses Python 3.12, and the code avoids anything newer than 3.12.
 
 ## Layout of the code
 
@@ -69,8 +77,8 @@ python -m photo_organizer.testdrive check test-drives/one
 
 `.github/workflows/ci.yml`:
 
-- **Every push and PR:** tests on macOS and Windows, plus a test-drive run.
-- **On `main`, `v*` tags, and manual runs:** builds `Organize Photos.app` on Apple Silicon with PyInstaller (`--onedir`, windowed, from `packaging/organize_photos.spec`). It checks the binary is arm64, verifies the ad-hoc signature with `codesign --verify --deep --strict`, runs the built app on a test drive, zips it with `ditto -c -k --keepParent`, and uploads the zip as a workflow artifact.
+- **Every push and PR:** tests on macOS and Windows, plus the full test drive (both phases, second-run checks, a 500-photo import).
+- **On `main`, `v*` tags, and manual runs:** builds `Organize Photos.app` on Apple Silicon with PyInstaller (`--onedir`, windowed, from `packaging/organize_photos.spec`). It checks the binary is arm64, verifies the ad-hoc signature with `codesign --verify --deep --strict`, runs the full test drive with the built app, zips it with `ditto -c -k --keepParent`, and uploads the zip as a workflow artifact.
 - **On a `v*` tag:** also attaches the zip to a GitHub Release.
 
 To release: bump `__version__` in `photo_organizer/__init__.py`, then `git tag v0.1.0 && git push --tags`.

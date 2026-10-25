@@ -10,6 +10,8 @@ BUILT_FEATURES = {
     "labels",
     "date-folders",
     "edge",
+    "manual-edits",
+    "big",
 }
 
 # Time zone the test drive is checked against (UTC video times are converted to it).

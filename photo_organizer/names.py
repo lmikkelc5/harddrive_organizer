@@ -120,7 +120,7 @@ def msg_summary(s) -> str:
         parts.append(
             f"{_count(s.not_photos, 'file')} {'wasn' if s.not_photos == 1 else 'weren'}'t "
             "a photo or video, so "
-            f"{'it is' if s.not_photos == 1 else 'they are'} in My Photos ▸ Unsorted ▸ Not Photos."
+            f"{"it's" if s.not_photos == 1 else "they're"} in My Photos ▸ Unsorted ▸ Not Photos."
         )
     if s.still_copying:
         parts.append(

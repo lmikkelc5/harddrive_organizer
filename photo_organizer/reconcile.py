@@ -166,11 +166,20 @@ def reconcile(drive: Drive, cat: Catalog, now: datetime | None = None) -> Reconc
             meta = read_meta(abs_path)
             where = folder_date(_lib_parts(drive, rel), now)
             fd = where if isinstance(where, dates.FuzzyDate) else None
+            date, source, tz = fd, ("manual" if fd else None), None
+            # If the photo's own date agrees with the folder it's in, keep the
+            # more precise one (e.g. a phone photo dropped into By Date/2019, or
+            # a file whose catalog record was lost in a power cut mid-import).
+            if fd and meta.candidates:
+                c = meta.candidates[0]
+                if (not dates.sanity_reject(c.date, now) and not dates.is_scanner(meta.make, meta.model, meta.software)
+                        and c.date.fits_folder(fd)):
+                    date, source, tz = c.date, c.source, c.tz_offset
             cat.add_photo(
                 sha256=sha, rel_path=rel, original_name=os.path.basename(rel),
                 original_inbox_path=None, kind=kind_for(rel),
-                taken_at=fd.iso() if fd else None, date_precision=fd.precision if fd else "unknown",
-                date_source="manual" if fd else None,
+                taken_at=date.iso() if date else None, date_precision=date.precision if date else "unknown",
+                date_source=source, tz_offset=tz,
                 gps_lat=meta.gps_lat, gps_lon=meta.gps_lon,
                 camera_make=meta.make, camera_model=meta.model,
                 size=size, mtime=mtime, status="ok",

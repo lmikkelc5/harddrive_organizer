@@ -29,12 +29,11 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Unit + end-to-end tests
         run: pytest -q
-      - name: Test drive (make, organize, check)
+      - name: Test drive (both phases, second-run checks, 500-photo import)
         shell: bash
-        run: |
-          python -m photo_organizer.testdrive make "$RUNNER_TEMP/drive"
-          python -m photo_organizer --drive "$RUNNER_TEMP/drive" --timezone America/Los_Angeles
-          python -m photo_organizer.testdrive check "$RUNNER_TEMP/drive"
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/drive" --big 500
 
   build:
     # macOS minutes are expensive: build only for main, tags, and manual runs.
@@ -63,11 +62,8 @@ jobs:
           lipo -archs "$BIN" | grep -q arm64
           codesign --verify --deep --strict --verbose=2 "dist/Organize Photos.app"
 
-      - name: Smoke test the built app on a test drive
-        run: |
-          python -m photo_organizer.testdrive make "$RUNNER_TEMP/appdrive"
-          "dist/Organize Photos.app/Contents/MacOS/Organize Photos" --drive "$RUNNER_TEMP/appdrive" --timezone America/Los_Angeles
-          python -m photo_organizer.testdrive check "$RUNNER_TEMP/appdrive"
+      - name: Full test drive with the built app
+        run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/appdrive" --app "dist/Organize Photos.app/Contents/MacOS/Organize Photos"
 
       - name: Zip (ditto keeps the .app bundle intact)
         run: |

@@ -148,3 +148,24 @@ def test_second_run_is_a_no_op(drive):
     s = drive.organize()
     assert s.nothing_to_do
     assert drive.files() == before
+
+
+def test_photo_dropped_into_year_keeps_its_exact_date_if_it_fits(drive):
+    _first_run(drive)
+    make_image(os.path.join(drive.by_date, "2019", "from phone.jpg"), "2019:08:01 09:00:00")
+    make_image(os.path.join(drive.by_date, "2019", "wrong clock.jpg"), "2012:08:01 09:00:00")
+    drive.organize()
+    fits = drive.row(original_name="from phone.jpg")
+    assert (fits["taken_at"], fits["date_source"]) == ("2019-08-01T09:00:00", "exif-original")
+    wrong = drive.row(original_name="wrong clock.jpg")
+    assert (wrong["taken_at"], wrong["date_source"]) == ("2019", "manual")  # her placement wins
+
+
+def test_catalog_lost_mid_import_is_recovered(drive):
+    """A power cut after a move but before the catalog write: the next run re-finds the file."""
+    _first_run(drive)
+    with drive.db() as con:
+        con.execute("DELETE FROM photos WHERE original_name = 'IMG_0001.JPG'")
+    drive.organize()
+    row = drive.row(rel_path="My Photos/By Date/2024/2024-07-14_15-30-22.jpg")
+    assert row["taken_at"] == "2024-07-14T15:30:22"

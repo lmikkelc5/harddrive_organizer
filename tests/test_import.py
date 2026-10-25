@@ -390,3 +390,22 @@ def test_never_overwrites(drive):
     with open(os.path.join(drive.by_date, "2024", "2024-07-14_15-30-22.jpg"), "rb") as f:
         assert f.read() == b"hers"
     assert "2024/2024-07-14_15-30-22_2.jpg" in drive.files(drive.by_date)
+
+
+def test_loose_inbox_files_get_no_pile_guess(drive):
+    # Dated phone photos loose in the inbox must not make an undated loose photo "Probably 2024".
+    for i in range(1, 5):
+        make_image(drive.inbox_path(f"IMG_10{i}.JPG"), f"2024:07:0{i} 10:00:00")
+    p = make_image(drive.inbox_path("photo.jpg"))
+    t = datetime(2008, 5, 5, 12).timestamp()
+    os.utime(p, (t, t))
+    drive.organize()
+    assert drive.row(original_name="photo.jpg")["rel_path"] == "My Photos/Unsorted/Date Unknown/photo.jpg"
+
+
+def test_loose_inbox_neighbors_still_guess(drive):
+    make_image(drive.inbox_path("DSC_0410.JPG"), "2011:08:20 10:00:00", model="D90")
+    make_image(drive.inbox_path("DSC_0411.JPG"), model="D90")
+    make_image(drive.inbox_path("DSC_0412.JPG"), "2011:08:20 10:20:00", model="D90")
+    drive.organize()
+    assert drive.row(original_name="DSC_0411.JPG")["rel_path"] == "My Photos/Unsorted/Probably 2011/DSC_0411.JPG"

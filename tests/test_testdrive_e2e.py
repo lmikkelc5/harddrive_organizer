@@ -1,41 +1,48 @@
-"""End to end: generate a test drive, run the organizer, check against expected.json.
+"""End to end on a generated test drive (TEST_DRIVE.md):
 
-Phase 2 (edits) and idempotency are added in later steps of TEST_DRIVE.md.
+phase 1 → second run changes nothing → Mom's edits → phase 2 → second run changes nothing.
+Unbuilt features are xfail; HEIC/macOS/symlink-only scenarios skip with a reason.
 """
 
 import os
 
 import pytest
 
-from conftest import FakeUI
-from photo_organizer.run import get_timezone, organize
-from photo_organizer.layout import Drive
-from photo_organizer.testdrive.check import FAIL, PENDING, SKIP, check
-from photo_organizer.testdrive.features import TEST_TIMEZONE
+from photo_organizer.testdrive.check import FAIL, PENDING, SKIP
+from photo_organizer.testdrive.flow import full, in_process_organizer
 from photo_organizer.testdrive.make import NotATestDrive, make
 
 
 @pytest.fixture(scope="module")
-def first_run(tmp_path_factory):
+def flow(tmp_path_factory):
     root = str(tmp_path_factory.mktemp("td") / "drive")
-    manifest = make(root)
-    organize(Drive(root), FakeUI(), tz=get_timezone(TEST_TIMEZONE))
-    return root, manifest, check(root, "first-run")
+    return full(root, in_process_organizer(), big=50, progress=lambda *_: None)
 
 
-def test_phase1_files(first_run):
-    _, _, results = first_run
-    failures = [f"{r.id}: {r.detail} {r.more}" for r in results if r.status == FAIL]
-    assert not failures, "\n".join(failures)
+def _failures(results):
+    return "\n".join(f"{r.id}: {r.detail} {r.more}" for r in results if r.status == FAIL)
 
 
-def test_phase1_reports_skips_and_pending(first_run):
-    _, manifest, results = first_run
-    for r in results:
-        if r.status == SKIP:
-            pytest.skip(f"{r.id} skipped: {r.detail}")  # e.g. HEIC on a PC without pillow-heif
-        if r.status == PENDING:
-            pytest.xfail(f"{r.id}: feature {r.feature} not built yet")
+@pytest.mark.parametrize("phase", ["first-run", "after-edit"])
+def test_phase(flow, phase):
+    results = [r for r in flow[phase] if r.feature != "idempotency"]
+    assert not _failures(results), _failures(results)
+
+
+@pytest.mark.parametrize("phase", ["first-run", "after-edit"])
+def test_second_run_changes_nothing(flow, phase):
+    results = [r for r in flow[phase] if r.feature == "idempotency"]
+    assert results and not _failures(results), _failures(results)
+
+
+@pytest.mark.parametrize("phase", ["first-run", "after-edit"])
+def test_nothing_pending_or_skipped(flow, phase):
+    pending = [r.id for r in flow[phase] if r.status == PENDING]
+    if pending:
+        pytest.xfail(f"features not built yet: {pending}")
+    skipped = [f"{r.id} ({r.detail})" for r in flow[phase] if r.status == SKIP]
+    if skipped:
+        pytest.skip("skipped here: " + "; ".join(skipped))
 
 
 def test_make_refuses_to_wipe_a_real_folder(tmp_path):
@@ -47,6 +54,6 @@ def test_make_refuses_to_wipe_a_real_folder(tmp_path):
 
 
 def test_make_is_deterministic(tmp_path):
-    a = make(str(tmp_path / "a"))
-    b = make(str(tmp_path / "b"))
+    a = make(str(tmp_path / "a"), big=5)
+    b = make(str(tmp_path / "b"), big=5)
     assert [f["sha256"] for f in a["files"]] == [f["sha256"] for f in b["files"]]

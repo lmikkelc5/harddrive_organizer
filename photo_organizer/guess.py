@@ -45,7 +45,11 @@ def compute_guesses(entries: list[GuessEntry], now: datetime) -> dict[object, tu
         by_folder[e.folder].append(e)
 
     guesses: dict[object, tuple[str, str]] = {}
-    for folder_entries in by_folder.values():
+    for folder, folder_entries in by_folder.items():
+        # Loose files at the top of the inbox are a mixed pile, so the pile's
+        # majority year or modified times say nothing about any one photo.
+        # Only sequential camera neighbors count there.
+        loose = folder == ""
         dated = [e for e in folder_entries if e.year is not None]
         undated = [e for e in folder_entries if e.year is None]
         if not undated:
@@ -53,7 +57,7 @@ def compute_guesses(entries: list[GuessEntry], now: datetime) -> dict[object, tu
 
         # Majority year of dated photos in this folder.
         majority: int | None = None
-        if len(dated) >= 2:
+        if len(dated) >= 2 and not loose:
             year, count = Counter(e.year for e in dated).most_common(1)[0]
             if count * 2 > len(dated):
                 majority = year
@@ -67,7 +71,7 @@ def compute_guesses(entries: list[GuessEntry], now: datetime) -> dict[object, tu
                 guesses[e.key] = (str(y), "neighbors")
             elif majority is not None:
                 guesses[e.key] = (str(majority), "folder-majority")
-            elif not bulk_copied:
+            elif not bulk_copied and not loose:
                 mt = datetime.fromtimestamp(e.mtime)
                 if mt < now - MTIME_MIN_AGE and EARLIEST_DIGITAL_YEAR <= mt.year <= now.year:
                     guesses[e.key] = (str(mt.year), "file-modified-time")

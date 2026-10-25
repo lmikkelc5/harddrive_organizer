@@ -120,6 +120,11 @@ class Catalog:
         self.db = sqlite3.connect(path)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys = ON")
+        if path != ":memory:":
+            # WAL makes the commit after every moved file cheap (big imports were
+            # spending half their time here) and still survives an app crash.
+            self.db.execute("PRAGMA journal_mode = WAL")
+            self.db.execute("PRAGMA synchronous = NORMAL")
         self.db.executescript(SCHEMA)
         self.db.execute(
             "INSERT OR IGNORE INTO meta(key, value) VALUES ('schema_version', ?)",
