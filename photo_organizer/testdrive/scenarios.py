@@ -1,5 +1,5 @@
 """The test-drive scenarios, as data. Expected results follow CLAUDE.md:
-By Date has year folders only; exact-time photos are renamed
+By date has year folders only; exact-time photos are renamed
 YYYY-MM-DD_HH-MM-SS.ext; others get a date prefix ("2004 dl_1.jpg").
 """
 
@@ -8,13 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-LIB = "My Photos"
-BY_DATE = f"{LIB}/By Date"
+LIB = "My photos"
+BY_DATE = f"{LIB}/By date"
 UNSORTED = f"{LIB}/Unsorted"
-DATE_UNKNOWN = f"{UNSORTED}/Date Unknown"
+DATE_UNKNOWN = f"{UNSORTED}/Date unknown"
 DUPLICATES = f"{LIB}/Duplicates (safe to delete)"
 SIDECARS = ".photo-organizer/sidecars"
-INBOX = "Put New Photos Here"
+INBOX = "Put new photos here"
 
 # Every file gets this modified time unless a scenario says otherwise. It's
 # old (so files aren't "still copying") and identical, so it never produces
@@ -39,7 +39,7 @@ COLORS = {
 class Spec:
     id: str
     feature: str
-    source: str                         # relative to Put New Photos Here/
+    source: str                         # relative to Put new photos here/
     expect: dict
     kind: str = "image"                 # image | video | bytes | copy | junk
     exif: dict = field(default_factory=dict)
@@ -60,7 +60,7 @@ class Check:
     absent / present: a path must (not) exist. needs_links: only meaningful
     where symlinks work. inbox-only: the inbox holds exactly these files.
     label-count: exactly `count` labels match group + label (case-insensitively).
-    links-healthy: every link under My Photos points at a real file.
+    links-healthy: every link under My photos points at a real file.
     copy: a copy Mom made is left alone and cataloged once (sha, path).
     """
     id: str
@@ -102,16 +102,9 @@ def unsorted(sub: str, name: str, **more) -> dict:
     return dict(dir=f"{UNSORTED}/{sub}", name=name, precision="unknown", **more)
 
 
-def trip(name: str) -> dict:
-    return dict(labels=[f"Trip: {name}"], links=[f"{LIB}/By Trip/{name}"])
-
-
 def event(name: str) -> dict:
-    return dict(labels=[f"Event: {name}"], links=[f"{LIB}/By Event/{name}"])
+    return dict(labels=[f"Event: {name}"], links=[f"{LIB}/By event/{name}"])
 
-
-def album(name: str) -> dict:
-    return dict(labels=[f"Album: {name}"], links=[f"{LIB}/Albums/{name}"])
 
 
 # ---------------------------------------------------------------------------
@@ -169,18 +162,18 @@ def _sanity(now: datetime) -> list[Spec]:
     specs = [
         Spec("sanity-scanner", f, "scan_001.jpg", unsorted=True,
              exif=exif_at("2021-05-01 10:00:00", make="EPSON", model="Perfection V600"),
-             expect=unsorted("Date Unknown", "scan_001.jpg", reject_reason="scanner")),
+             expect=unsorted("Date unknown", "scan_001.jpg", reject_reason="scanner")),
         *[
             Spec(f"sanity-reset-{i}", f, f"DSC0000{i}.JPG", unsorted=True,
                  exif=exif_at(f"2000-01-01 00:00:{sec}", make="SONY", model="DSC-W55"),
-                 expect=unsorted("Date Unknown", f"DSC0000{i}.JPG", reject_reason="camera-reset"))
+                 expect=unsorted("Date unknown", f"DSC0000{i}.JPG", reject_reason="camera-reset"))
             for i, sec in [(1, "05"), (2, "12"), (3, "40")]
         ],
         Spec("sanity-future", f, "IMG_0007.JPG", unsorted=True,
              exif=exif_at(future.strftime("%Y-%m-%d %H:%M:%S")),
-             expect=unsorted("Date Unknown", "IMG_0007.JPG", reject_reason="future")),
+             expect=unsorted("Date unknown", "IMG_0007.JPG", reject_reason="future")),
         Spec("sanity-no-clues", f, "photo.jpg", unsorted=True,
-             expect=unsorted("Date Unknown", "photo.jpg")),
+             expect=unsorted("Date unknown", "photo.jpg")),
     ]
     return specs
 
@@ -191,28 +184,28 @@ def _guesses(now: datetime) -> list[Spec]:
     yesterday = (now - timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
     specs = [
         Spec("guess-camping-410", f, "Camping/DSC_0410.JPG", exif=exif_at("2011-08-20 10:00:00", **nikon),
-             expect=exact("2011-08-20 10:00:00", **album("Camping"))),
+             expect=exact("2011-08-20 10:00:00", labels=[])),
         Spec("guess-camping-413", f, "Camping/DSC_0413.JPG", exif=exif_at("2011-08-20 10:20:00", **nikon),
-             expect=exact("2011-08-20 10:20:00", **album("Camping"))),
+             expect=exact("2011-08-20 10:20:00", labels=[])),
     ]
     for n in (411, 412):
         specs.append(Spec(f"guess-camping-{n}", f, f"Camping/DSC_0{n}.JPG", unsorted=True, exif=dict(nikon),
                           expect=unsorted("Probably 2011/Camping", f"DSC_0{n}.JPG", best_guess="2011",
-                                          **album("Camping"))))
+                                          labels=[])))
     for i in range(1, 5):
         specs.append(Spec(f"guess-beach-{i}", f, f"Beach/beach_{i}.jpg", exif=exif_at(f"2015-06-0{i} 14:00:00"),
-                          expect=exact(f"2015-06-0{i} 14:00:00", **album("Beach"))))
+                          expect=exact(f"2015-06-0{i} 14:00:00", labels=[])))
     for x in "ab":
         specs.append(Spec(f"guess-beach-{x}", f, f"Beach/beach_{x}.jpg", unsorted=True,
                           expect=unsorted("Probably 2015/Beach", f"beach_{x}.jpg", best_guess="2015",
-                                          **album("Beach"))))
+                                          labels=[])))
     for i, d in enumerate([datetime(2008, 3, 4, 12), datetime(2008, 7, 19, 12), datetime(2008, 11, 2, 12)], start=1):
         specs.append(Spec(f"guess-oldpics-{i}", f, f"Old Pics/old_{i}.jpg", unsorted=True, mtime=d,
                           expect=unsorted("Probably 2008/Old Pics", f"old_{i}.jpg", best_guess="2008",
-                                          **album("Old Pics"))))
+                                          labels=[])))
     for i in range(1, 4):
         specs.append(Spec(f"guess-copied-{i}", f, f"Copied/c_{i}.jpg", unsorted=True, mtime=yesterday,
-                          expect=unsorted("Date Unknown/Copied", f"c_{i}.jpg", **album("Copied"))))
+                          expect=unsorted("Date unknown/Copied", f"c_{i}.jpg", labels=[])))
     return specs
 
 
@@ -221,23 +214,22 @@ def _folder_hints() -> tuple[list[Spec], list[Check]]:
     specs = [
         *[
             Spec(f"hint-laptop-{i}", f, f"Old Laptop/2004/Disneyland/dl_{i}.jpg",
-                 expect=fuzzy("2004", f"dl_{i}.jpg", "year", source="folder-name", **album("Old Laptop")))
+                 expect=fuzzy("2004", f"dl_{i}.jpg", "year", source="folder-name", labels=[]))
             for i in (1, 2)
         ],
         Spec("hint-laptop-exif", f, "Old Laptop/2004/Disneyland/dl_3.jpg", exif=exif_at("2004-05-02 14:00:00"),
-             expect=exact("2004-05-02 14:00:00", **album("Old Laptop"))),
+             expect=exact("2004-05-02 14:00:00", labels=[])),
         *[
             Spec(f"hint-xmas-{i}", f, f"Christmas 2009/xmas_{i}.jpg",
-                 expect=fuzzy("2009", f"xmas_{i}.jpg", "year", source="folder-name", **album("Christmas 2009")))
+                 expect=fuzzy("2009", f"xmas_{i}.jpg", "year", source="folder-name", labels=[]))
             for i in (1, 2)
         ],
         Spec("hint-xmas-conflict", f, "Christmas 2009/xmas_3.jpg", exif=exif_at("2005-12-24 18:00:00"),
-             expect=exact("2005-12-24 18:00:00", conflict=True, **album("Christmas 2009"))),
+             expect=exact("2005-12-24 18:00:00", conflict=True, labels=[])),
     ]
     checks = [
-        Check("hint-album-old-laptop", f, "present", path=f"{LIB}/Albums/Old Laptop", needs_links=True),
-        Check("hint-no-album-2004", f, "absent", path=f"{LIB}/Albums/2004"),
-        Check("hint-no-album-disneyland", f, "absent", path=f"{LIB}/Albums/Disneyland"),
+        # Plain folders never make views: there is no Albums folder at all.
+        Check("hint-no-albums", f, "absent", path=f"{LIB}/Albums"),
     ]
     return specs, checks
 
@@ -246,13 +238,13 @@ def _labels() -> tuple[list[Spec], list[Check]]:
     f = "labels"
     specs = [
         *[
-            Spec(f"label-hawaii-{i}", f, f"TRIP - Hawaii 2026/IMG_200{i}.JPG",
+            Spec(f"label-hawaii-{i}", f, f"EVENT - Hawaii 2026/IMG_200{i}.JPG",
                  exif=exif_at(f"2026-07-1{i - 1} 11:00:00"),
-                 expect=exact(f"2026-07-1{i - 1} 11:00:00", **trip("Hawaii 2026")))
+                 expect=exact(f"2026-07-1{i - 1} 11:00:00", **event("Hawaii 2026")))
             for i in (1, 2, 3)
         ],
-        Spec("label-hawaii-nodate", f, "TRIP - Hawaii 2026/hawaii_nodate.jpg",
-             expect=fuzzy("2026", "hawaii_nodate.jpg", "year", source="folder-name", **trip("Hawaii 2026"))),
+        Spec("label-hawaii-nodate", f, "EVENT - Hawaii 2026/hawaii_nodate.jpg",
+             expect=fuzzy("2026", "hawaii_nodate.jpg", "year", source="folder-name", **event("Hawaii 2026"))),
         *[
             Spec(f"label-christmas-{i}", f, f"EVENT - Christmas 2025/IMG_300{i}.JPG",
                  exif=exif_at(f"2025-12-25 09:{(i - 1) * 30:02d}:00"),
@@ -260,26 +252,28 @@ def _labels() -> tuple[list[Spec], list[Check]]:
             for i in (1, 2)
         ],
         *[
-            Spec(f"label-yellowstone-{i}", f, f"TRIP - Yellowstone 2019/Day 1/IMG_400{i}.JPG",
+            Spec(f"label-yellowstone-{i}", f, f"EVENT - Yellowstone 2019/Day 1/IMG_400{i}.JPG",
                  exif=exif_at(f"2019-06-1{i - 1} 08:00:00"),
-                 expect=exact(f"2019-06-1{i - 1} 08:00:00", **trip("Yellowstone 2019")))
+                 expect=exact(f"2019-06-1{i - 1} 08:00:00", **event("Yellowstone 2019")))
             for i in (1, 2)
         ],
         *[
             Spec(f"label-recipes-{i}", f, f"Grandma's Recipes/r_{i}.jpg", exif=exif_at(f"2022-10-0{i} 17:00:00"),
-                 expect=exact(f"2022-10-0{i} 17:00:00", **album("Grandma's Recipes")))
+                 expect=exact(f"2022-10-0{i} 17:00:00", labels=[]))
             for i in (1, 2)
         ],
-        Spec("label-zion-nospaces", f, "Trip-Zion 2021/z_1.jpg", exif=exif_at("2021-05-15 13:00:00"),
-             expect=exact("2021-05-15 13:00:00", **trip("Zion 2021"))),
+        # She types EVENT, but another word (here "Trip", no spaces) still becomes an event.
+        Spec("label-zion-other-word", f, "Trip-Zion 2021/z_1.jpg", exif=exif_at("2021-05-15 13:00:00"),
+             expect=exact("2021-05-15 13:00:00", **event("Zion 2021"))),
         Spec("label-graduation-endash", f, "Event – Graduation 2018/g_1.jpg", exif=exif_at("2018-05-20 15:00:00"),
              expect=exact("2018-05-20 15:00:00", **event("Graduation 2018"))),
     ]
     checks = [
-        Check("label-no-day-1-trip", f, "absent", path=f"{LIB}/By Trip/Day 1"),
-        Check("label-no-day-1-album", f, "absent", path=f"{LIB}/Albums/Day 1"),
-        Check("label-trip-folder", f, "present", path=f"{LIB}/By Trip/Hawaii 2026", needs_links=True),
-        Check("label-event-folder", f, "present", path=f"{LIB}/By Event/Graduation 2018", needs_links=True),
+        Check("label-no-day-1", f, "absent", path=f"{LIB}/By event/Day 1"),
+        Check("label-no-by-trip", f, "absent", path=f"{LIB}/By trip"),
+        Check("label-event-hawaii", f, "present", path=f"{LIB}/By event/Hawaii 2026", needs_links=True),
+        Check("label-other-word-is-event", f, "present", path=f"{LIB}/By event/Zion 2021", needs_links=True),
+        Check("label-event-folder", f, "present", path=f"{LIB}/By event/Graduation 2018", needs_links=True),
     ]
     return specs, checks
 
@@ -307,17 +301,17 @@ def _date_folders() -> tuple[list[Spec], list[Check]]:
         Spec("datef-colon-mac", f, "DATE - 7:4:2009/k_1.jpg", requires="macos",
              expect=fuzzy("2009-07-04", "k_1.jpg", "day", source="date-folder")),
         *[
-            Spec(f"datef-in-trip-{i}", f, f"TRIP - Hawaii 2009/DATE - June 2009/h_{i}.jpg",
+            Spec(f"datef-in-event-{i}", f, f"EVENT - Hawaii 2009/DATE - June 2009/h_{i}.jpg",
                  exif=exif_at(f"2013-08-0{i} 10:00:00", make="Canon", model="Canon PowerShot A520"),
-                 expect=fuzzy("2009-06", f"h_{i}.jpg", "month", source="date-folder", **trip("Hawaii 2009")))
+                 expect=fuzzy("2009-06", f"h_{i}.jpg", "month", source="date-folder", **event("Hawaii 2009")))
             for i in (1, 2)
         ],
         Spec("datef-unreadable", f, "DATE - a long time ago/lt_1.jpg", unsorted=True,
-             expect=unsorted("Date Unknown/DATE - a long time ago", "lt_1.jpg", labels=[])),
+             expect=unsorted("Date unknown/DATE - a long time ago", "lt_1.jpg", labels=[])),
     ]
     checks = [
         Check("datef-no-date-view", f, "absent", path=f"{BY_DATE}/a long time ago"),
-        Check("datef-no-date-view-2", f, "absent", path=f"{LIB}/By Date/June 2009"),
+        Check("datef-no-date-view-2", f, "absent", path=f"{LIB}/By date/June 2009"),
     ]
     return specs, checks
 
@@ -329,7 +323,7 @@ def _edge() -> tuple[list[Spec], list[Check]]:
              expect=dict(dir=DUPLICATES, name="IMG_0001 copy.JPG")),
         Spec("edge-pdf", f, "recipe.pdf", kind="bytes", counts="not_photo",
              content=b"%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n",
-             expect=dict(dir=f"{UNSORTED}/Not Photos", name="recipe.pdf")),
+             expect=dict(dir=f"{UNSORTED}/Not photos", name="recipe.pdf")),
         Spec("edge-still-copying", f, "IMG_0099.JPG", counts="still_copying",
              # A modified time in the future stays inside the "still copying"
              # window no matter how long you wait before running the organizer.

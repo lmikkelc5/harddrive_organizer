@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS moves (
     at TEXT NOT NULL
 );
 
--- Copies Mom made inside My Photos: left alone, remembered so we don't re-hash them.
+-- Copies Mom made inside My photos: left alone, remembered so we don't re-hash them.
 CREATE TABLE IF NOT EXISTS known_copies (
     rel_path TEXT PRIMARY KEY,
     sha256 TEXT NOT NULL,

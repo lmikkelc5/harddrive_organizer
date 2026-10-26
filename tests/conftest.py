@@ -103,7 +103,7 @@ class DriveHelper(Drive):
             return con.execute(f"SELECT * FROM photos WHERE {clause}", tuple(where.values())).fetchone()
 
     def files(self, under: str | None = None) -> list[str]:
-        """Real files (not symlinks, not hidden) under My Photos, relative, sorted."""
+        """Real files (not symlinks, not hidden) under My photos, relative, sorted."""
         top = under or self.library
         out = []
         for dp, dn, fn in os.walk(top):

@@ -8,20 +8,23 @@ from photo_organizer.labels import Label, folder_context, parse_folder_name
 NOW = datetime(2026, 10, 22)
 
 
+# Every "WORD - name" folder is an event: she types EVENT, and anything else
+# (TRIP, a typo) still lands in By event instead of being lost.
 @pytest.mark.parametrize("name, group, label", [
-    ("TRIP - Hawaii 2026", "Trip", "Hawaii 2026"),
-    ("trip - hawaii 2026", "Trip", "hawaii 2026"),
-    ("Trips - Hawaii 2026", "Trip", "Hawaii 2026"),
-    ("TRIP-Hawaii 2026", "Trip", "Hawaii 2026"),
-    ("TRIP – Hawaii 2026", "Trip", "Hawaii 2026"),   # en dash
-    ("TRIP — Hawaii 2026", "Trip", "Hawaii 2026"),   # em dash
-    ("TRIP: Hawaii 2026", "Trip", "Hawaii 2026"),
-    ("  TRIP  -   Hawaii   2026 ", "Trip", "Hawaii 2026"),
-    ("TRIP - Hawaii - Maui", "Trip", "Hawaii - Maui"),  # first separator only
+    ("TRIP - Hawaii 2026", "Event", "Hawaii 2026"),
+    ("trip - hawaii 2026", "Event", "hawaii 2026"),
+    ("Trips - Hawaii 2026", "Event", "Hawaii 2026"),
+    ("TRIP-Hawaii 2026", "Event", "Hawaii 2026"),
+    ("TRIP – Hawaii 2026", "Event", "Hawaii 2026"),   # en dash
+    ("TRIP — Hawaii 2026", "Event", "Hawaii 2026"),   # em dash
+    ("TRIP: Hawaii 2026", "Event", "Hawaii 2026"),
+    ("  TRIP  -   Hawaii   2026 ", "Event", "Hawaii 2026"),
+    ("TRIP - Hawaii - Maui", "Event", "Hawaii - Maui"),  # first separator only
+    ("EVNT - Birthday", "Event", "Birthday"),             # typo still an event
     ("EVENT - Christmas 2026", "Event", "Christmas 2026"),
     ("Events - Christmas 2026", "Event", "Christmas 2026"),
-    ("WEDDING - Anna & Tom", "Wedding", "Anna & Tom"),  # any group word
-    ("Christmas - 2026", "Christmas", "2026"),           # Christmas isn't a plural
+    ("WEDDING - Anna & Tom", "Event", "Anna & Tom"),  # any group word
+    ("Christmas - 2026", "Event", "2026"),           # Christmas isn't a plural
 ])
 def test_label_folders(name, group, label):
     m = parse_folder_name(name, NOW)
@@ -47,9 +50,9 @@ def test_plain_folders(name):
     assert parse_folder_name(name, NOW).kind == "plain"
 
 
-def test_context_nesting_trip_and_date():
-    ctx = folder_context(["TRIP - Hawaii", "DATE - June 2009", "Day 1"], NOW)
-    assert ctx.labels == [Label("Trip", "Hawaii")]
+def test_context_nesting_event_and_date():
+    ctx = folder_context(["EVENT - Hawaii", "DATE - June 2009", "Day 1"], NOW)
+    assert ctx.labels == [Label("Event", "Hawaii")]
     assert ctx.date == FuzzyDate("month", 2009, 6)
     assert ctx.bad_date_folder is None
 
@@ -63,20 +66,19 @@ def test_context_deepest_date_wins():
     assert ctx.date == FuzzyDate("year", 2009) and ctx.bad_date_folder is None
 
 
-def test_context_albums_only_top_level_and_not_bare_dates():
+def test_context_plain_folders_make_no_labels():
     ctx = folder_context(["Old Laptop", "2004", "Disneyland"], NOW)
-    assert ctx.labels == [Label("Album", "Old Laptop")]
+    assert ctx.labels == []
     assert ctx.hint == FuzzyDate("year", 2004)
-    assert folder_context(["2004", "Disneyland"], NOW).labels == []
-    assert folder_context(["Christmas 2026"], NOW).labels == [Label("Album", "Christmas 2026")]
+    assert folder_context(["Christmas 2026"], NOW).labels == []
 
 
-def test_context_trip_year_is_a_hint():
-    ctx = folder_context(["TRIP - Hawaii 2026", "Day 1"], NOW)
+def test_context_event_year_is_a_hint():
+    ctx = folder_context(["EVENT - Hawaii 2026", "Day 1"], NOW)
     assert ctx.hint == FuzzyDate("year", 2026)
-    assert ctx.labels == [Label("Trip", "Hawaii 2026")]
+    assert ctx.labels == [Label("Event", "Hawaii 2026")]
 
 
 def test_context_multiple_labels():
-    ctx = folder_context(["TRIP - Hawaii 2026", "EVENT - Wedding"], NOW)
-    assert [l.group for l in ctx.labels] == ["Trip", "Event"]
+    ctx = folder_context(["EVENT - Hawaii 2026", "EVENT - Wedding"], NOW)
+    assert [l.name for l in ctx.labels] == ["Hawaii 2026", "Wedding"]

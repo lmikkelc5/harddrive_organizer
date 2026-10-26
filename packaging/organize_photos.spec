@@ -1,4 +1,4 @@
-# PyInstaller spec for Organize Photos.app (macOS, Apple Silicon).
+# PyInstaller spec for Organize photos.app (macOS, Apple Silicon).
 # Build:  pyinstaller --noconfirm --clean packaging/organize_photos.spec
 #
 # --onedir + windowed (console=False) + BUNDLE, as PyInstaller recommends for
@@ -33,25 +33,25 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Organize Photos",
+    name="Organize photos",
     console=False,
     argv_emulation=False,
     target_arch="arm64",
     codesign_identity=None,  # PyInstaller ad-hoc signs, which Apple Silicon requires
 )
-coll = COLLECT(exe, a.binaries, a.datas, name="Organize Photos")
+coll = COLLECT(exe, a.binaries, a.datas, name="Organize photos")
 app = BUNDLE(
     coll,
-    name="Organize Photos.app",
+    name="Organize photos.app",
     bundle_identifier="com.mikkel.organizephotos",
     version=VERSION,
     info_plist={
-        "CFBundleDisplayName": "Organize Photos",
+        "CFBundleDisplayName": "Organize photos",
         "CFBundleShortVersionString": VERSION,
         "CFBundleVersion": VERSION,
         "LSMinimumSystemVersion": "13.0",
         "NSHighResolutionCapable": True,
         # Text for the "access files on a removable volume" prompt.
-        "NSRemovableVolumesUsageDescription": "Organize Photos sorts the photos on your photo drive.",
+        "NSRemovableVolumesUsageDescription": "Organize photos sorts the photos on your photo drive.",
     },
 )

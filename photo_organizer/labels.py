@@ -15,7 +15,7 @@ _LABEL_RE = re.compile(r"^\s*([^\W\d_]+)\s*[-–—:]\s*(.+?)\s*$")
 
 @dataclass(frozen=True)
 class Label:
-    group: str  # normalized, e.g. "Trip"
+    group: str  # always "Event" for now
     name: str   # as typed, whitespace tidied, e.g. "Hawaii 2026"
 
     @property
@@ -51,7 +51,9 @@ def parse_folder_name(name: str, now: datetime | None = None) -> FolderMeaning:
     if group == names.DATE_GROUP:
         d = dates.parse_date_text(rest, now)
         return FolderMeaning("date", date=d) if d else FolderMeaning("bad-date")
-    return FolderMeaning("label", label=Label(group, rest))
+    # Only events make views. Any other group word (or a typo of EVENT) is
+    # treated as an event too, so a folder she names is never silently ignored.
+    return FolderMeaning("label", label=Label(names.EVENT_GROUP, rest))
 
 
 @dataclass
@@ -67,7 +69,7 @@ class FolderContext:
 def folder_context(folder_names: list[str], now: datetime | None = None) -> FolderContext:
     """folder_names: inbox-relative folders, outermost first."""
     ctx = FolderContext()
-    for depth, name in enumerate(folder_names):
+    for name in folder_names:
         meaning = parse_folder_name(name, now)
         if meaning.kind == "label":
             if meaning.label.key not in {l.key for l in ctx.labels}:
@@ -78,9 +80,7 @@ def folder_context(folder_names: list[str], now: datetime | None = None) -> Fold
         elif meaning.kind == "bad-date":
             ctx.date = None
             ctx.bad_date_folder = name
-        elif depth == 0 and not dates.is_bare_date_name(name, now):
-            # Plain folders dropped straight into the inbox become albums.
-            ctx.labels.append(Label(names.ALBUM_GROUP, _tidy(name)))
+        # Plain folders (no dash) only give context and date hints.
     hint_names = [n for n in folder_names if parse_folder_name(n, now).kind not in ("date", "bad-date")]
     ctx.hint = dates.path_hint(hint_names, now)
     return ctx

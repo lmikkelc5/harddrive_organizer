@@ -69,7 +69,7 @@ def _write(spec: Spec, path: str, made: dict[str, str]) -> None:
         exp = spec.expect
         where = f"{exp.get('dir', '?')}/{exp.get('name') or '(original name)'}"
         size = (320, 240) if spec.feature == "big" else (640, 480)
-        img = story_image([spec.feature, spec.id, "Expected:", where.replace("My Photos/", "")],
+        img = story_image([spec.feature, spec.id, "Expected:", where.replace("My photos/", "")],
                           COLORS.get(spec.feature, (60, 60, 60)), size)
         save_image(path, img, build_exif(description=f"test-drive {spec.id}", **spec.exif))
     elif spec.kind == "video":

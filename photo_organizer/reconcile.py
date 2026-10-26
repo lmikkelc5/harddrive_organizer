@@ -1,4 +1,4 @@
-"""Make the catalog match what's really in By Date and Unsorted.
+"""Make the catalog match what's really in By date and Unsorted.
 
 Mom may move, rename, delete or copy files in Finder. We never move them
 back; we update the catalog to follow her.
@@ -35,9 +35,9 @@ class ReconcileReport:
 
 
 def folder_date(lib_parts: list[str], now: datetime | None = None) -> dates.FuzzyDate | str | None:
-    """What a file's place in My Photos says about its date.
+    """What a file's place in My photos says about its date.
 
-    lib_parts: path relative to My Photos, including the filename.
+    lib_parts: path relative to My photos, including the filename.
     Returns a FuzzyDate, "unsorted", or None (location says nothing).
     """
     now = now or datetime.now()
@@ -61,7 +61,7 @@ def folder_date(lib_parts: list[str], now: datetime | None = None) -> dates.Fuzz
 
 
 def walk_library_files(drive: Drive) -> dict[str, tuple[int, float]]:
-    """rel_path -> (size, mtime) for real files in By Date and Unsorted."""
+    """rel_path -> (size, mtime) for real files in By date and Unsorted."""
     out: dict[str, tuple[int, float]] = {}
     for top in (drive.by_date, drive.unsorted):
         if not os.path.isdir(top):
@@ -161,14 +161,14 @@ def reconcile(drive: Drive, cat: Catalog, now: datetime | None = None) -> Reconc
             cat.remember_copy(rel, sha, size, mtime)
             report.copies.append(rel)
         else:
-            # A new file she put straight into My Photos.
+            # A new file she put straight into My photos.
             abs_path = drive.abs(rel)
             meta = read_meta(abs_path)
             where = folder_date(_lib_parts(drive, rel), now)
             fd = where if isinstance(where, dates.FuzzyDate) else None
             date, source, tz = fd, ("manual" if fd else None), None
             # If the photo's own date agrees with the folder it's in, keep the
-            # more precise one (e.g. a phone photo dropped into By Date/2019, or
+            # more precise one (e.g. a phone photo dropped into By date/2019, or
             # a file whose catalog record was lost in a power cut mid-import).
             if fd and meta.candidates:
                 c = meta.candidates[0]

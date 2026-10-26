@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class ViewFolder:
-    parts: tuple[str, ...]          # path under My Photos, e.g. ("By Trip", "Hawaii 2026")
+    parts: tuple[str, ...]          # path under My photos, e.g. ("By event", "Hawaii 2026")
     photos: list = field(default_factory=list)  # catalog rows
     label_id: int | None = None
 
@@ -53,7 +53,7 @@ def _hide_live_videos(cat: Catalog, rows: list) -> list:
 
 @register_view
 def label_views(cat: Catalog) -> list[ViewFolder]:
-    """By Trip / By Event / ... / Albums, one folder per label."""
+    """By event: one folder per event."""
     out = []
     for lab in cat.labels():
         rows = _hide_live_videos(cat, cat.photos_with_label(lab["id"]))
@@ -67,14 +67,10 @@ def label_views(cat: Catalog) -> list[ViewFolder]:
 # Which top-level folders belong to views
 # ---------------------------------------------------------------------------
 
-_RESERVED = {names.BY_DATE, names.UNSORTED, names.DUPLICATES}
-
-
 def group_for_root(root_name: str) -> str | None:
-    if root_name == names.ALBUMS:
-        return names.ALBUM_GROUP
-    if root_name.startswith("By ") and root_name not in _RESERVED:
-        return root_name[3:]
+    """'By event' -> 'Event'. Folders we don't manage (incl. her own) -> None."""
+    if root_name.lower() == names.group_folder(names.EVENT_GROUP).lower():
+        return names.EVENT_GROUP
     return None
 
 
@@ -171,7 +167,7 @@ def _adopt_file(drive, cat, ops, path, group, label_name, label_id, report) -> N
         return
     try:
         if row["status"] == "missing" or not os.path.exists(drive.abs(row["rel_path"])):
-            # She moved it out of By Date into the view: put it back where it was.
+            # She moved it out of By date into the view: put it back where it was.
             want = drive.abs(row["rel_path"])
             folder, base = os.path.split(want)
             stem, ext = os.path.splitext(base)
@@ -183,7 +179,7 @@ def _adopt_file(drive, cat, ops, path, group, label_name, label_id, report) -> N
             cat.record_move(drive.rel(path), drive.rel(dst), "label-request")
             report.restored.append(drive.rel(dst))
         else:
-            # A copy of a photo that's already safe in My Photos.
+            # A copy of a photo that's already safe in My photos.
             stem, ext = os.path.splitext(os.path.basename(path))
             dst = os.path.join(drive.duplicates, free_name(ops, drive.duplicates, stem, [ext]) + ext)
             ops.move(path, dst)

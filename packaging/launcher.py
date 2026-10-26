@@ -1,4 +1,4 @@
-"""Entry script PyInstaller freezes into Organize Photos.app."""
+"""Entry script PyInstaller freezes into Organize photos.app."""
 
 import sys
 

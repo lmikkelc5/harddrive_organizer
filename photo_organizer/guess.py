@@ -1,7 +1,7 @@
 """Best guesses for undated photos, so Unsorted can be fixed a whole folder at a time.
 
 A guess only picks the "Probably YYYY" folder inside Unsorted. It never
-files anything into By Date.
+files anything into By date.
 """
 
 from __future__ import annotations

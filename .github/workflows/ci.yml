@@ -52,28 +52,28 @@ jobs:
           cache-dependency-path: requirements*.txt
       - run: pip install -r requirements.txt pyinstaller
 
-      - name: Build Organize Photos.app
+      - name: Build Organize photos.app
         run: pyinstaller --noconfirm --clean packaging/organize_photos.spec
 
       - name: Check it's arm64 and signed
         run: |
-          BIN="dist/Organize Photos.app/Contents/MacOS/Organize Photos"
+          BIN="dist/Organize photos.app/Contents/MacOS/Organize photos"
           file "$BIN"
           lipo -archs "$BIN" | grep -q arm64
-          codesign --verify --deep --strict --verbose=2 "dist/Organize Photos.app"
+          codesign --verify --deep --strict --verbose=2 "dist/Organize photos.app"
 
       - name: Full test drive with the built app
-        run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/appdrive" --app "dist/Organize Photos.app/Contents/MacOS/Organize Photos"
+        run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/appdrive" --app "dist/Organize photos.app/Contents/MacOS/Organize photos"
 
       - name: Zip (ditto keeps the .app bundle intact)
         run: |
           VERSION=$(python -c "import photo_organizer; print(photo_organizer.__version__)")
-          echo "ZIP=Organize-Photos-$VERSION.zip" >> "$GITHUB_ENV"
-          ditto -c -k --keepParent "dist/Organize Photos.app" "Organize-Photos-$VERSION.zip"
+          echo "ZIP=Organize-photos-$VERSION.zip" >> "$GITHUB_ENV"
+          ditto -c -k --keepParent "dist/Organize photos.app" "Organize-photos-$VERSION.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Organize-Photos
+          name: Organize-photos
           path: ${{ env.ZIP }}
           retention-days: 30
 
@@ -82,5 +82,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Organize Photos $GITHUB_REF_NAME"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Organize photos $GITHUB_REF_NAME"
           gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber

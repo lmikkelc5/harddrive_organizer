@@ -10,12 +10,12 @@ from photo_organizer.dates import FuzzyDate
 
 
 def test_folder_date_rules():
-    assert folder_date(["By Date", "2019", "x.jpg"]) == FuzzyDate("year", 2019)
-    assert folder_date(["By Date", "1990s", "x.jpg"]) == FuzzyDate("decade", 1990)
-    assert folder_date(["By Date", "2019", "Beach Day", "x.jpg"]) == FuzzyDate("year", 2019)
-    assert folder_date(["By Date", "2019", "06 - June", "x.jpg"]) == FuzzyDate("month", 2019, 6)
-    assert folder_date(["By Date", "Misc", "x.jpg"]) is None
-    assert folder_date(["By Date", "x.jpg"]) is None
+    assert folder_date(["By date", "2019", "x.jpg"]) == FuzzyDate("year", 2019)
+    assert folder_date(["By date", "1990s", "x.jpg"]) == FuzzyDate("decade", 1990)
+    assert folder_date(["By date", "2019", "Beach Day", "x.jpg"]) == FuzzyDate("year", 2019)
+    assert folder_date(["By date", "2019", "06 - June", "x.jpg"]) == FuzzyDate("month", 2019, 6)
+    assert folder_date(["By date", "Misc", "x.jpg"]) is None
+    assert folder_date(["By date", "x.jpg"]) is None
     assert folder_date(["Unsorted", "Probably 2008", "x.jpg"]) == "unsorted"
     assert folder_date(["Duplicates (safe to delete)", "x.jpg"]) is None
 
@@ -31,11 +31,11 @@ def test_move_unsorted_into_year_folder(drive):
     _first_run(drive)
     dst_dir = os.path.join(drive.by_date, "2010")
     os.makedirs(dst_dir)
-    shutil.move(os.path.join(drive.unsorted, "Date Unknown", "photo.jpg"), os.path.join(dst_dir, "photo.jpg"))
+    shutil.move(os.path.join(drive.unsorted, "Date unknown", "photo.jpg"), os.path.join(dst_dir, "photo.jpg"))
     drive.organize()
     assert os.path.exists(os.path.join(dst_dir, "photo.jpg"))
     row = drive.row(original_name="photo.jpg")
-    assert row["rel_path"] == "My Photos/By Date/2010/photo.jpg"
+    assert row["rel_path"] == "My photos/By date/2010/photo.jpg"
     assert (row["taken_at"], row["date_precision"], row["date_source"]) == ("2010", "year", "manual")
     assert row["status"] == "ok"
 
@@ -44,7 +44,7 @@ def test_move_into_her_own_month_folder(drive):
     _first_run(drive)
     dst_dir = os.path.join(drive.by_date, "2010", "03 - March")
     os.makedirs(dst_dir)
-    shutil.move(os.path.join(drive.unsorted, "Date Unknown", "photo.jpg"), os.path.join(dst_dir, "photo.jpg"))
+    shutil.move(os.path.join(drive.unsorted, "Date unknown", "photo.jpg"), os.path.join(dst_dir, "photo.jpg"))
     drive.organize()
     row = drive.row(original_name="photo.jpg")
     assert (row["taken_at"], row["date_precision"]) == ("2010-03", "month")
@@ -68,7 +68,7 @@ def test_subfolder_in_same_year_keeps_exact_date(drive):
     shutil.move(os.path.join(drive.by_date, "2019", "2019-06-03_10-00-00.jpg"), beach)
     drive.organize()
     row = drive.row(original_name="IMG_0002.JPG")
-    assert row["rel_path"] == "My Photos/By Date/2019/Beach Day/2019-06-03_10-00-00.jpg"
+    assert row["rel_path"] == "My photos/By date/2019/Beach Day/2019-06-03_10-00-00.jpg"
     assert (row["taken_at"], row["date_source"]) == ("2019-06-03T10:00:00", "exif-original")
 
 
@@ -78,7 +78,7 @@ def test_rename(drive):
               os.path.join(drive.by_date, "2024", "Mom favorite.jpg"))
     drive.organize()
     row = drive.row(original_name="IMG_0001.JPG")
-    assert row["rel_path"] == "My Photos/By Date/2024/Mom favorite.jpg"
+    assert row["rel_path"] == "My photos/By date/2024/Mom favorite.jpg"
     assert row["taken_at"] == "2024-07-14T15:30:22"
     assert os.path.exists(os.path.join(drive.by_date, "2024", "Mom favorite.jpg"))
 
@@ -114,7 +114,7 @@ def test_copy_becomes_the_photo_if_original_deleted(drive):
     os.remove(src)
     drive.organize()
     row = drive.row(original_name="IMG_0001.JPG")
-    assert row["status"] == "ok" and row["rel_path"] == "My Photos/By Date/2024/copy.jpg"
+    assert row["status"] == "ok" and row["rel_path"] == "My photos/By date/2024/copy.jpg"
 
 
 def test_move_into_unsorted_makes_date_unknown(drive):
@@ -167,5 +167,5 @@ def test_catalog_lost_mid_import_is_recovered(drive):
     with drive.db() as con:
         con.execute("DELETE FROM photos WHERE original_name = 'IMG_0001.JPG'")
     drive.organize()
-    row = drive.row(rel_path="My Photos/By Date/2024/2024-07-14_15-30-22.jpg")
+    row = drive.row(rel_path="My photos/By date/2024/2024-07-14_15-30-22.jpg")
     assert row["taken_at"] == "2024-07-14T15:30:22"

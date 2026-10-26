@@ -91,7 +91,7 @@ class FuzzyDate:
 
     # ---- naming ----
     def year_folder(self) -> str:
-        """By Date subfolder: '2009', or '1990s' for a decade."""
+        """By date subfolder: '2009', or '1990s' for a decade."""
         return f"{self.year}s" if self.precision == "decade" else str(self.year)
 
     def name_prefix(self) -> str:

@@ -1,4 +1,4 @@
-"""Link folders (By Trip, By Event, Albums). Most need symlinks, so they run on macOS CI."""
+"""Link folders (By event). Most need symlinks, so they run on macOS CI."""
 
 import os
 import shutil
@@ -19,14 +19,15 @@ def test_safe_folder_name():
 
 
 def test_plan_views_from_catalog(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "Day 1", "b.jpg"), "2026:07:11 11:00:00")
-    make_image(drive.inbox_path("Grandma's Recipes", "r.jpg"), "2022:10:01 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "Day 1", "b.jpg"), "2026:07:11 11:00:00")
+    make_image(drive.inbox_path("Grandma's Recipes", "r.jpg"), "2022:10:01 11:00:00")  # plain: no view
+    make_image(drive.inbox_path("TRIP - Zion", "z.jpg"), "2021:05:01 11:00:00")  # other word: an event
     drive.organize()
     cat = Catalog(drive.catalog)
     plan = {vf.parts: len(vf.photos) for vf in plan_views(cat)}
     cat.close()
-    assert plan == {("By Trip", "Hawaii 2026"): 2, ("Albums", "Grandma's Recipes"): 1}
+    assert plan == {("By event", "Hawaii 2026"): 2, ("By event", "Zion"): 1}
 
 
 def test_adding_a_view_is_one_function(drive):
@@ -47,28 +48,28 @@ def test_adding_a_view_is_one_function(drive):
 
 
 def test_same_label_typed_differently_joins(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
     drive.organize()
-    make_image(drive.inbox_path("trip - hawaii 2026", "b.jpg"), "2026:07:11 11:00:00")
+    make_image(drive.inbox_path("event - hawaii 2026", "b.jpg"), "2026:07:11 11:00:00")
     drive.organize()
     with drive.db() as con:
-        rows = con.execute("SELECT label FROM labels").fetchall()
-    assert [r[0] for r in rows] == ["Hawaii 2026"]  # first spelling kept
+        rows = con.execute("SELECT group_name, label FROM labels").fetchall()
+    assert [tuple(r) for r in rows] == [("Event", "Hawaii 2026")]  # first spelling kept
 
 
 @needs_symlinks
 def test_links_are_relative_and_work(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "Day 1", "IMG_2001.JPG"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "Day 1", "IMG_2001.JPG"), "2026:07:10 11:00:00")
     make_image(drive.inbox_path("EVENT - Christmas 2025", "IMG_3001.JPG"), "2025:12:25 09:00:00")
     drive.organize()
-    trip = drive.lib("By Trip", "Hawaii 2026")
+    trip = drive.lib("By event", "Hawaii 2026")
     assert _links(trip) == ["2026-07-10_11-00-00.jpg"]
     link = os.path.join(trip, "2026-07-10_11-00-00.jpg")
     assert not os.path.isabs(os.readlink(link))
-    assert os.readlink(link) == os.path.join("..", "..", "By Date", "2026", "2026-07-10_11-00-00.jpg")
+    assert os.readlink(link) == os.path.join("..", "..", "By date", "2026", "2026-07-10_11-00-00.jpg")
     assert os.path.isfile(link)
-    assert not os.path.exists(drive.lib("By Trip", "Day 1"))
-    assert _links(drive.lib("By Event", "Christmas 2025")) == ["2025-12-25_09-00-00.jpg"]
+    assert not os.path.exists(drive.lib("By event", "Day 1"))
+    assert _links(drive.lib("By event", "Christmas 2025")) == ["2025-12-25_09-00-00.jpg"]
     with open(os.path.join(trip, names.LABEL_ID_FILE)) as f:
         assert f.read().strip().isdigit()
 
@@ -76,20 +77,20 @@ def test_links_are_relative_and_work(drive):
 @needs_symlinks
 def test_live_photo_video_hidden_from_views(drive):
     from conftest import make_video
-    make_image(drive.inbox_path("TRIP - X", "IMG_1.JPG"), "2026:07:10 11:00:00")
-    make_video(drive.inbox_path("TRIP - X", "IMG_1.MOV"))
+    make_image(drive.inbox_path("EVENT - X", "IMG_1.JPG"), "2026:07:10 11:00:00")
+    make_video(drive.inbox_path("EVENT - X", "IMG_1.MOV"))
     drive.organize()
-    assert _links(drive.lib("By Trip", "X")) == ["2026-07-10_11-00-00.jpg"]
+    assert _links(drive.lib("By event", "X")) == ["2026-07-10_11-00-00.jpg"]
 
 
 @needs_symlinks
 def test_rename_label_folder_sticks(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "a.jpg"), "2026:07:10 11:00:00")
     drive.organize()
-    os.rename(drive.lib("By Trip", "Hawaii 2026"), drive.lib("By Trip", "Maui 2026"))
+    os.rename(drive.lib("By event", "Hawaii 2026"), drive.lib("By event", "Maui 2026"))
     drive.organize()
-    assert not os.path.exists(drive.lib("By Trip", "Hawaii 2026"))
-    assert _links(drive.lib("By Trip", "Maui 2026")) == ["2026-07-10_11-00-00.jpg"]
+    assert not os.path.exists(drive.lib("By event", "Hawaii 2026"))
+    assert _links(drive.lib("By event", "Maui 2026")) == ["2026-07-10_11-00-00.jpg"]
     with drive.db() as con:
         assert [r[0] for r in con.execute("SELECT label FROM labels")] == ["Maui 2026"]
 
@@ -101,7 +102,7 @@ def test_deleted_photo_link_removed(drive):
     drive.organize()
     os.remove(os.path.join(drive.by_date, "2025", "2025-12-25_09-00-00.jpg"))
     drive.organize()
-    assert _links(drive.lib("By Event", "Christmas 2025")) == ["2025-12-25_10-00-00.jpg"]
+    assert _links(drive.lib("By event", "Christmas 2025")) == ["2025-12-25_10-00-00.jpg"]
 
 
 @needs_symlinks
@@ -110,55 +111,55 @@ def test_all_photos_of_label_deleted_removes_folder(drive):
     drive.organize()
     os.remove(os.path.join(drive.by_date, "2025", "2025-12-25_09-00-00.jpg"))
     drive.organize()
-    assert not os.path.exists(drive.lib("By Event"))
+    assert not os.path.exists(drive.lib("By event"))
 
 
 @needs_symlinks
 def test_deleted_link_comes_back(drive):
-    make_image(drive.inbox_path("TRIP - Yellowstone 2019", "a.jpg"), "2019:06:10 09:00:00")
+    make_image(drive.inbox_path("EVENT - Yellowstone 2019", "a.jpg"), "2019:06:10 09:00:00")
     drive.organize()
-    os.unlink(drive.lib("By Trip", "Yellowstone 2019", "2019-06-10_09-00-00.jpg"))
+    os.unlink(drive.lib("By event", "Yellowstone 2019", "2019-06-10_09-00-00.jpg"))
     drive.organize()
-    assert _links(drive.lib("By Trip", "Yellowstone 2019")) == ["2019-06-10_09-00-00.jpg"]
+    assert _links(drive.lib("By event", "Yellowstone 2019")) == ["2019-06-10_09-00-00.jpg"]
 
 
 @needs_symlinks
-def test_drag_photo_from_by_date_into_trip(drive):
-    make_image(drive.inbox_path("TRIP - Maui", "a.jpg"), "2026:07:10 11:00:00")
+def test_drag_photo_from_by_date_into_event(drive):
+    make_image(drive.inbox_path("EVENT - Maui", "a.jpg"), "2026:07:10 11:00:00")
     make_image(drive.inbox_path("Grandma's Recipes", "r.jpg"), "2022:10:01 11:00:00")
     drive.organize()
-    shutil.move(os.path.join(drive.by_date, "2022", "2022-10-01_11-00-00.jpg"), drive.lib("By Trip", "Maui"))
+    shutil.move(os.path.join(drive.by_date, "2022", "2022-10-01_11-00-00.jpg"), drive.lib("By event", "Maui"))
     drive.organize()
     assert os.path.isfile(os.path.join(drive.by_date, "2022", "2022-10-01_11-00-00.jpg"))
-    assert _links(drive.lib("By Trip", "Maui")) == ["2022-10-01_11-00-00.jpg", "2026-07-10_11-00-00.jpg"]
-    assert _links(drive.lib("Albums", "Grandma's Recipes")) == ["2022-10-01_11-00-00.jpg"]
+    assert _links(drive.lib("By event", "Maui")) == ["2022-10-01_11-00-00.jpg", "2026-07-10_11-00-00.jpg"]
+    assert not os.path.exists(drive.lib("Albums"))
 
 
 @needs_symlinks
-def test_drag_new_photo_into_trip_imports_it(drive):
-    make_image(drive.inbox_path("TRIP - Maui 2026", "a.jpg"), "2026:07:10 11:00:00")
+def test_drag_new_photo_into_event_imports_it(drive):
+    make_image(drive.inbox_path("EVENT - Maui 2026", "a.jpg"), "2026:07:10 11:00:00")
     drive.organize()
-    make_image(drive.lib("By Trip", "Maui 2026", "new.jpg"), "2026:07:12 08:00:00")
+    make_image(drive.lib("By event", "Maui 2026", "new.jpg"), "2026:07:12 08:00:00")
     s = drive.organize()
     assert os.path.isfile(os.path.join(drive.by_date, "2026", "2026-07-12_08-00-00.jpg"))
-    assert _links(drive.lib("By Trip", "Maui 2026")) == ["2026-07-10_11-00-00.jpg", "2026-07-12_08-00-00.jpg"]
+    assert _links(drive.lib("By event", "Maui 2026")) == ["2026-07-10_11-00-00.jpg", "2026-07-12_08-00-00.jpg"]
     assert s.sorted_photos == 1
 
 
 @needs_symlinks
-def test_copy_dragged_into_trip_goes_to_duplicates(drive):
-    make_image(drive.inbox_path("TRIP - Maui", "a.jpg"), "2026:07:10 11:00:00")
+def test_copy_dragged_into_event_goes_to_duplicates(drive):
+    make_image(drive.inbox_path("EVENT - Maui", "a.jpg"), "2026:07:10 11:00:00")
     make_image(drive.inbox_path("b.jpg"), "2026:07:11 11:00:00")
     drive.organize()
-    shutil.copy2(os.path.join(drive.by_date, "2026", "2026-07-11_11-00-00.jpg"), drive.lib("By Trip", "Maui"))
+    shutil.copy2(os.path.join(drive.by_date, "2026", "2026-07-11_11-00-00.jpg"), drive.lib("By event", "Maui"))
     drive.organize()
     assert drive.files(drive.duplicates) == ["2026-07-11_11-00-00.jpg"]
-    assert "2026-07-11_11-00-00.jpg" in _links(drive.lib("By Trip", "Maui"))
+    assert "2026-07-11_11-00-00.jpg" in _links(drive.lib("By event", "Maui"))
 
 
 @needs_symlinks
 def test_sync_never_deletes_real_files(drive):
-    make_image(drive.inbox_path("TRIP - Maui", "a.jpg"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Maui", "a.jpg"), "2026:07:10 11:00:00")
     drive.organize()
     # Her own top-level folder full of real files is not a view and is left alone.
     make_image(drive.lib("Grandkids", "k.jpg"))
@@ -169,8 +170,19 @@ def test_sync_never_deletes_real_files(drive):
 def test_no_symlinks_still_sorts_by_date(drive, monkeypatch):
     from photo_organizer import run as run_mod
     monkeypatch.setattr(run_mod, "symlinks_supported", lambda _: False)
-    make_image(drive.inbox_path("TRIP - Maui", "a.jpg"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Maui", "a.jpg"), "2026:07:10 11:00:00")
     s = drive.organize()
     assert not s.views_enabled
     assert drive.files(drive.by_date) == ["2026/2026-07-10_11-00-00.jpg"]
-    assert not os.path.exists(drive.lib("By Trip"))
+    assert not os.path.exists(drive.lib("By event"))
+
+
+@needs_symlinks
+def test_only_by_date_and_by_event_are_made(drive):
+    make_image(drive.inbox_path("EVENT - Party", "a.jpg"), "2025:12:25 09:00:00")
+    make_image(drive.inbox_path("TRIP - Maui", "b.jpg"), "2025:07:01 09:00:00")
+    make_image(drive.inbox_path("Grandma's Recipes", "c.jpg"), "2022:10:01 11:00:00")
+    drive.organize()
+    tops = sorted(os.listdir(drive.library))
+    assert tops == ["By date", "By event", "Duplicates (safe to delete)", "Unsorted"]
+    assert sorted(os.listdir(drive.lib("By event"))) == ["Maui", "Party"]

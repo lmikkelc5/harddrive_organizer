@@ -83,7 +83,7 @@ def _has_marker(root: str) -> bool:
 
 
 def app_bundle_path(executable: str | None = None) -> str | None:
-    """'/Volumes/X/Organize Photos.app' from the running executable, if inside a .app."""
+    """'/Volumes/X/Organize photos.app' from the running executable, if inside a .app."""
     exe = os.path.abspath(executable or sys.executable)
     parts = exe.split(os.sep)
     for i in range(len(parts) - 1, -1, -1):

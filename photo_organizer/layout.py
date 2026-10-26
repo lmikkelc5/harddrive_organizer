@@ -35,7 +35,7 @@ class Drive:
         return os.path.join(self.root, *rel_path.split("/"))
 
     def lib_rel(self, abs_path: str) -> list[str]:
-        """Path parts relative to My Photos."""
+        """Path parts relative to My photos."""
         return os.path.relpath(abs_path, self.library).replace(os.sep, "/").split("/")
 
     def ensure_layout(self, ops) -> None:

@@ -23,10 +23,10 @@ def test_exif_date_sorts_into_year_folder(drive):
     assert row["camera_model"] == "iPhone 15"
     assert row["gps_lat"] == pytest.approx(37.33, abs=1e-4)
     assert row["gps_lon"] == pytest.approx(-122.01, abs=1e-4)
-    assert row["rel_path"] == "My Photos/By Date/2024/2024-07-14_15-30-22.jpg"
-    assert row["original_inbox_path"] == "Put New Photos Here/IMG_0001.JPG"
+    assert row["rel_path"] == "My photos/By date/2024/2024-07-14_15-30-22.jpg"
+    assert row["original_inbox_path"] == "Put new photos here/IMG_0001.JPG"
     assert s.sorted_photos == 1
-    assert "All done! 1 photo sorted into My Photos." in drive.ui.infos[0]
+    assert "All done! 1 photo sorted into My photos." in drive.ui.infos[0]
     assert os.listdir(drive.inbox) == []
 
 
@@ -72,7 +72,7 @@ def test_repeated_jan_first_from_one_camera_is_rejected(drive):
     drive.organize()
     assert drive.files(drive.by_date) == []
     assert sorted(drive.files(drive.unsorted)) == [
-        "Date Unknown/DSC00001.JPG", "Date Unknown/DSC00002.JPG", "Date Unknown/DSC00003.JPG",
+        "Date unknown/DSC00001.JPG", "Date unknown/DSC00002.JPG", "Date unknown/DSC00003.JPG",
         names.HOW_TO_FIX_FILE]
     assert drive.row(original_name="DSC00001.JPG")["reject_reason"] == "camera-reset"
     assert drive.row(original_name="DSC00001.JPG")["raw_meta_date"] == "2005-01-01T00:00:05"
@@ -83,7 +83,7 @@ def test_reset_default_date_rejected(drive):
     drive.organize()
     row = drive.row(original_name="x.jpg")
     assert row["reject_reason"] == "camera-reset"
-    assert row["rel_path"] == "My Photos/Unsorted/Date Unknown/x.jpg"
+    assert row["rel_path"] == "My photos/Unsorted/Date unknown/x.jpg"
 
 
 def test_future_date_rejected(drive):
@@ -97,10 +97,10 @@ def test_scanner_date_rejected(drive):
     make_image(drive.inbox_path("scan_001.jpg"), "2021:05:01 10:00:00", make="EPSON", model="Perfection V600")
     s = drive.organize()
     row = drive.row(original_name="scan_001.jpg")
-    assert row["rel_path"] == "My Photos/Unsorted/Date Unknown/scan_001.jpg"
+    assert row["rel_path"] == "My photos/Unsorted/Date unknown/scan_001.jpg"
     assert row["reject_reason"] == "scanner"
     assert s.unsorted == 1
-    assert "1 photo didn't have a date, so it's in My Photos ▸ Unsorted." in drive.ui.infos[0]
+    assert "1 photo didn't have a date, so it's in My photos ▸ Unsorted." in drive.ui.infos[0]
 
 
 def test_scanner_filename_date_also_rejected(drive):
@@ -134,20 +134,20 @@ def test_date_folder_precisions(drive):
     assert drive.row(original_name="j_1.jpg")["date_precision"] == "day"
 
 
-def test_date_folder_inside_trip(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2009", "DATE - June 2009", "h_1.jpg"), "2013:01:01 10:00:00")
+def test_date_folder_inside_event(drive):
+    make_image(drive.inbox_path("EVENT - Hawaii 2009", "DATE - June 2009", "h_1.jpg"), "2013:01:01 10:00:00")
     drive.organize()
     assert drive.files(drive.by_date) == ["2009/2009-06 h_1.jpg"]
     with drive.db() as con:
         labels = con.execute("SELECT group_name, label FROM labels").fetchall()
-    assert [tuple(l) for l in labels] == [("Trip", "Hawaii 2009")]
+    assert [tuple(l) for l in labels] == [("Event", "Hawaii 2009")]
 
 
 def test_unreadable_date_folder_goes_to_unsorted(drive):
     make_image(drive.inbox_path("DATE - a long time ago", "lt_1.jpg"), "2015:01:05 10:00:00")
     s = drive.organize()
     assert drive.row(original_name="lt_1.jpg")["rel_path"] == \
-        "My Photos/Unsorted/Date Unknown/DATE - a long time ago/lt_1.jpg"
+        "My photos/Unsorted/Date unknown/DATE - a long time ago/lt_1.jpg"
     assert s.unreadable_date_folders == ["DATE - a long time ago"]
     assert 'I couldn\'t read the date in "DATE - a long time ago", so those photos are in Unsorted.' \
         in drive.ui.infos[0]
@@ -190,7 +190,7 @@ def test_duplicates_in_batch_and_catalog(drive):
     s = drive.organize()
     assert s.duplicates == 1
     assert drive.files(drive.duplicates) == ["IMG_0001 copy.JPG", "again/IMG_0001.JPG"]
-    assert "already in My Photos" in drive.ui.infos[0]
+    assert "already in My photos" in drive.ui.infos[0]
 
 
 def test_junk_ignored_and_empty_folders_removed(drive):
@@ -217,13 +217,13 @@ def test_folder_with_failures_is_not_removed(drive, monkeypatch):
     s = drive.organize()
     assert s.failed == 1 and s.sorted_photos == 1
     assert os.listdir(drive.inbox_path("F")) == ["b.jpg"]
-    assert "still in \"Put New Photos Here.\"" in drive.ui.infos[0]
+    assert "still in \"Put new photos here.\"" in drive.ui.infos[0]
 
 
 def test_not_photos(drive):
     make_file(drive.inbox_path("recipe.pdf"), b"%PDF-1.4\n%%EOF\n")
     s = drive.organize()
-    assert drive.files(drive.unsorted) == [names.HOW_TO_FIX_FILE, "Not Photos/recipe.pdf"]
+    assert drive.files(drive.unsorted) == [names.HOW_TO_FIX_FILE, "Not photos/recipe.pdf"]
     assert s.not_photos == 1
     assert "wasn't a photo or video" in drive.ui.infos[0]
 
@@ -301,7 +301,7 @@ def test_video_utc_converted_to_local(drive):
     drive.organize(tz=LA)
     row = drive.row(original_name="VID_0001.MP4")
     assert row["taken_at"] == "2024-07-14T15:30:22"
-    assert row["rel_path"] == "My Photos/By Date/2024/2024-07-14_15-30-22.mp4"
+    assert row["rel_path"] == "My photos/By date/2024/2024-07-14_15-30-22.mp4"
     assert "All done! 1 video sorted" in drive.ui.infos[0]
 
 
@@ -325,7 +325,7 @@ def test_majority_guess(drive):
     make_image(drive.inbox_path("Beach", "beach_a.jpg"))
     drive.organize()
     row = drive.row(original_name="beach_a.jpg")
-    assert row["rel_path"] == "My Photos/Unsorted/Probably 2015/Beach/beach_a.jpg"
+    assert row["rel_path"] == "My photos/Unsorted/Probably 2015/Beach/beach_a.jpg"
     assert row["guess_source"] == "folder-majority"
 
 
@@ -339,14 +339,14 @@ def test_mtime_guess_and_bulk_copy(drive):
         p = make_image(drive.inbox_path("Copied", f"c_{i}.jpg"))
         os.utime(p, (same, same))
     drive.organize()
-    assert drive.row(original_name="old_2.jpg")["rel_path"] == "My Photos/Unsorted/Probably 2008/Old Pics/old_2.jpg"
-    assert drive.row(original_name="c_1.jpg")["rel_path"] == "My Photos/Unsorted/Date Unknown/Copied/c_1.jpg"
+    assert drive.row(original_name="old_2.jpg")["rel_path"] == "My photos/Unsorted/Probably 2008/Old Pics/old_2.jpg"
+    assert drive.row(original_name="c_1.jpg")["rel_path"] == "My photos/Unsorted/Date unknown/Copied/c_1.jpg"
 
 
 # ---- dry run, catalog backups, errors ----
 
 def test_dry_run_changes_nothing(drive):
-    make_image(drive.inbox_path("TRIP - Hawaii 2026", "IMG_2001.JPG"), "2026:07:10 11:00:00")
+    make_image(drive.inbox_path("EVENT - Hawaii 2026", "IMG_2001.JPG"), "2026:07:10 11:00:00")
     before = sorted(os.path.join(dp, f) for dp, _, fs in os.walk(drive.root) for f in fs)
     drive.organize(dry_run=True)
     after = sorted(os.path.join(dp, f) for dp, _, fs in os.walk(drive.root) for f in fs)
@@ -400,7 +400,7 @@ def test_loose_inbox_files_get_no_pile_guess(drive):
     t = datetime(2008, 5, 5, 12).timestamp()
     os.utime(p, (t, t))
     drive.organize()
-    assert drive.row(original_name="photo.jpg")["rel_path"] == "My Photos/Unsorted/Date Unknown/photo.jpg"
+    assert drive.row(original_name="photo.jpg")["rel_path"] == "My photos/Unsorted/Date unknown/photo.jpg"
 
 
 def test_loose_inbox_neighbors_still_guess(drive):
@@ -408,4 +408,4 @@ def test_loose_inbox_neighbors_still_guess(drive):
     make_image(drive.inbox_path("DSC_0411.JPG"), model="D90")
     make_image(drive.inbox_path("DSC_0412.JPG"), "2011:08:20 10:20:00", model="D90")
     drive.organize()
-    assert drive.row(original_name="DSC_0411.JPG")["rel_path"] == "My Photos/Unsorted/Probably 2011/DSC_0411.JPG"
+    assert drive.row(original_name="DSC_0411.JPG")["rel_path"] == "My photos/Unsorted/Probably 2011/DSC_0411.JPG"

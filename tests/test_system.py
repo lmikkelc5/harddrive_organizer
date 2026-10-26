@@ -50,7 +50,7 @@ def test_full_run_through_cli(drive, capsys):
     from photo_organizer.__main__ import main
     make_image(drive.inbox_path("a.jpg"), "2024:07:14 15:30:22")
     assert main(["--drive", drive.root]) == 0
-    assert "All done! 1 photo sorted into My Photos." in capsys.readouterr().out
+    assert "All done! 1 photo sorted into My photos." in capsys.readouterr().out
 
 
 def test_dry_run_cli_prints_plan(drive, capsys):
@@ -58,7 +58,7 @@ def test_dry_run_cli_prints_plan(drive, capsys):
     make_image(drive.inbox_path("a.jpg"), "2024:07:14 15:30:22")
     main(["--drive", drive.root, "--dry-run"])
     out = capsys.readouterr().out
-    assert "[dry-run] move Put New Photos Here/a.jpg -> My Photos/By Date/2024/2024-07-14_15-30-22.jpg" in out
+    assert "[dry-run] move Put new photos here/a.jpg -> My photos/By date/2024/2024-07-14_15-30-22.jpg" in out
     assert os.path.exists(drive.inbox_path("a.jpg"))
 
 
@@ -75,31 +75,31 @@ def _fake_volumes(tmp_path, with_marker=True):
 
 def test_find_drive_next_to_app(tmp_path):
     vols, d = _fake_volumes(tmp_path)
-    exe = os.path.join(d, "Organize Photos.app", "Contents", "MacOS", "Organize Photos")
+    exe = os.path.join(d, "Organize photos.app", "Contents", "MacOS", "Organize photos")
     assert find_drive(exe, vols) == d
 
 
 def test_find_drive_first_run_at_volume_root(tmp_path):
     vols, d = _fake_volumes(tmp_path, with_marker=False)
-    exe = os.path.join(d, "Organize Photos.app", "Contents", "MacOS", "Organize Photos")
+    exe = os.path.join(d, "Organize photos.app", "Contents", "MacOS", "Organize photos")
     assert find_drive(exe, vols) == d
 
 
 def test_find_drive_from_applications_scans_volumes(tmp_path):
     vols, d = _fake_volumes(tmp_path)
-    exe = os.path.join(str(tmp_path), "Applications", "Organize Photos.app", "Contents", "MacOS", "Organize Photos")
+    exe = os.path.join(str(tmp_path), "Applications", "Organize photos.app", "Contents", "MacOS", "Organize photos")
     assert find_drive(exe, vols) == d
 
 
 def test_find_drive_translocated(tmp_path):
     vols, d = _fake_volumes(tmp_path)
-    exe = "/private/var/folders/xy/T/AppTranslocation/ABC/d/Organize Photos.app/Contents/MacOS/Organize Photos"
+    exe = "/private/var/folders/xy/T/AppTranslocation/ABC/d/Organize photos.app/Contents/MacOS/Organize photos"
     assert find_drive(exe, vols) == d
 
 
 def test_find_drive_none(tmp_path):
     vols, _ = _fake_volumes(tmp_path, with_marker=False)
-    exe = os.path.join(str(tmp_path), "Applications", "Organize Photos.app", "Contents", "MacOS", "x")
+    exe = os.path.join(str(tmp_path), "Applications", "Organize photos.app", "Contents", "MacOS", "x")
     assert find_drive(exe, vols) is None
 
 
@@ -119,8 +119,8 @@ def test_mac_ui_passes_message_as_argument(monkeypatch):
 def test_console_ui_survives_unencodable_text():
     raw = io.BytesIO()
     s = io.TextIOWrapper(raw, encoding="cp1252")
-    ConsoleUI(s).info("Unsorted ▸ Not Photos")
-    assert b"Unsorted ? Not Photos" in raw.getvalue()
+    ConsoleUI(s).info("Unsorted ▸ Not photos")
+    assert b"Unsorted ? Not photos" in raw.getvalue()
 
 
 # ---- messages ----
@@ -128,8 +128,8 @@ def test_console_ui_survives_unencodable_text():
 def test_summary_message_matches_the_draft():
     s = RunSummary(sorted_photos=143, unsorted=3, updated_labels=["Hawaii 2026", "Christmas 2026"])
     assert message_for(s) == (
-        "All done! 143 photos sorted into My Photos. Updated: Hawaii 2026, Christmas 2026. "
-        "3 photos didn't have a date, so they're in My Photos ▸ Unsorted.")
+        "All done! 143 photos sorted into My photos. Updated: Hawaii 2026, Christmas 2026. "
+        "3 photos didn't have a date, so they're in My photos ▸ Unsorted.")
 
 
 def test_summary_mentions_full_drive():

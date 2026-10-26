@@ -1,4 +1,4 @@
-"""One run of Organize Photos, start to finish, wrapped so nothing ever crashes at Mom."""
+"""One run of Organize photos, start to finish, wrapped so nothing ever crashes at Mom."""
 
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def organize(drive: Drive, ui, dry_run: bool = False, now: datetime | None = Non
         summary.views_enabled = symlinks_supported(drive.app_data) if not dry_run else True
         if not summary.views_enabled:
             log.warning("This drive can't hold symlinks (is it exFAT? It should be APFS). "
-                        "Sorting by date only; By Trip / By Event / Albums are skipped.")
+                        "Sorting by date only; By Trip / By event / Albums are skipped.")
 
         rec = reconcile(drive, cat, now)
         if rec.moved or rec.missing or rec.added or rec.copies:
