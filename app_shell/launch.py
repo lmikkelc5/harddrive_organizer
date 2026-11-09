@@ -111,10 +111,38 @@ def load_main(home: str | None = None, check=True, fetch=None):
     return main, pkg.__version__, "built-in"
 
 
+# Same wording as photo_organizer.names.MSG_UNEXPECTED_ERROR. Kept here because
+# this is shown when the sorting code itself couldn't be loaded.
+_CRASH_MESSAGE = (
+    "Something went wrong, but none of your photos were lost. Anything that "
+    "wasn't sorted is still in \"Put new photos here.\" Please let Mikkel know."
+)
+
+
+def _show_crash() -> None:
+    try:
+        if sys.platform == "darwin":
+            import subprocess
+            subprocess.run(["osascript", "-e", "on run argv", "-e",
+                            'display dialog (item 1 of argv) with title "Organize photos" '
+                            'buttons {"OK"} default button "OK" with icon caution',
+                            "-e", "end run", _CRASH_MESSAGE], capture_output=True)
+        else:
+            print(_CRASH_MESSAGE, file=sys.stderr)
+    except Exception:
+        pass
+
+
 def main() -> int:
     home = updater.home_dir()
     _setup_logging(home)
-    run_main, version, source = load_main(home)
+    try:
+        run_main, version, source = load_main(home)
+    except Exception:
+        # Even the built-in code couldn't load. Never crash at Mom.
+        log.exception("Couldn't start the sorting code")
+        _show_crash()
+        return 1
     os.environ[ENV_CODE] = f"{version} ({source})"
     return run_main()
 

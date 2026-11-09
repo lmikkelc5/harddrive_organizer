@@ -218,3 +218,13 @@ def test_broken_newest_falls_back_to_previous_good_download(tmp_path):
     _, version, source = launch.load_main(home, fetch=_latest(broken))
     assert (version, source) == (bump(1), "update")
     assert bump(2) in updater.State.load(home).bad
+
+
+def test_shell_never_crashes_if_code_cant_load(tmp_path, monkeypatch, capsys):
+    def broken(home=None, **kw):
+        raise ImportError("built-in code missing")
+
+    monkeypatch.setattr(launch, "load_main", broken)
+    monkeypatch.setenv(updater.ENV_HOME, str(tmp_path / "home"))
+    assert launch.main() == 1
+    assert "none of your photos were lost" in capsys.readouterr().err

@@ -20,7 +20,10 @@ hiddenimports += h
 datas += collect_data_files("tzdata")
 
 # The shell loads the sorting code by name at runtime, so list it explicitly
-# (the test-drive tools aren't needed in the app).
+# (the test-drive tools aren't needed in the app). collect_submodules needs
+# the project importable here.
+import sys
+sys.path.insert(0, ROOT)
 hiddenimports += collect_submodules("photo_organizer", filter=lambda m: ".testdrive" not in m)
 hiddenimports += collect_submodules("app_shell")
 # Standard-library modules a future remote code update might reasonably use.

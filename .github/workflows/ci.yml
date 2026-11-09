@@ -67,6 +67,16 @@ jobs:
           ORGANIZE_PHOTOS_NO_UPDATE: "1"   # test the code inside this build, not the latest release
         run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/appdrive" --app "dist/Organize photos.app/Contents/MacOS/Organize photos"
 
+      - name: Show the app shell's log if the built app failed
+        if: failure()
+        run: |
+          LOG="$HOME/Library/Application Support/Organize photos/updates.log"
+          if [ -f "$LOG" ]; then
+            echo "::error title=shell log::$(tail -c 1500 "$LOG" | tr '\n' '|')"
+          else
+            echo "::error title=shell log::no shell log at $LOG"
+          fi
+
       - name: Remote update smoke test (good update, then a broken one)
         run: |
           APP="dist/Organize photos.app/Contents/MacOS/Organize photos"
