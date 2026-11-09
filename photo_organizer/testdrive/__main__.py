@@ -3,12 +3,25 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from .check import FAIL, check, print_results
 from .edit import EditError, edit
 from .make import NotATestDrive, make
 from .snapshot import diff, snapshot
+
+
+def annotate(message: str) -> None:
+    """On GitHub Actions, also show a problem as a public annotation on the run."""
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::error title=test drive::{message.replace(chr(10), ' | ')[:900]}")
+
+
+def annotate_failures(results) -> None:
+    for r in results:
+        if r.status == FAIL:
+            annotate(f"{r.id}: {r.detail} {' '.join(r.more)}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -55,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "check":
         results = check(args.folder, args.phase, args.feature)
         print_results(args.folder, args.phase, results)
+        annotate_failures(results)
         return 1 if any(r.status == FAIL for r in results) else 0
 
     if args.cmd == "edit":
@@ -96,10 +110,22 @@ def main(argv: list[str] | None = None) -> int:
             results = full(args.folder, subprocess_organizer(args.app), big=args.big)
         except (NotATestDrive, EditError) as err:
             print(err, file=sys.stderr)
+            annotate(f"stopped: {err}")
+            # Show what the first run did, to explain why the edit step stopped.
+            try:
+                first = check(args.folder, "first-run")
+                print_results(args.folder, "first-run", first)
+                annotate_failures(first)
+            except Exception:
+                pass
             return 2
+        except Exception as err:
+            annotate(f"crashed: {type(err).__name__}: {err}")
+            raise
         for phase, rs in results.items():
             print()
             print_results(args.folder, phase, rs)
+            annotate_failures(rs)
         failed = any_failed(results)
         print("\nRESULT: " + ("FAILED" if failed else "all good"))
         return 1 if failed else 0
