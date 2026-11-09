@@ -220,11 +220,15 @@ def test_broken_newest_falls_back_to_previous_good_download(tmp_path):
     assert bump(2) in updater.State.load(home).bad
 
 
-def test_shell_never_crashes_if_code_cant_load(tmp_path, monkeypatch, capsys):
+def test_shell_never_crashes_if_code_cant_load(tmp_path, monkeypatch):
     def broken(home=None, **kw):
         raise ImportError("built-in code missing")
 
+    shown = []
     monkeypatch.setattr(launch, "load_main", broken)
+    # Record the dialog instead of showing it: on a Mac it would wait for a click forever.
+    monkeypatch.setattr(launch, "_show_crash", lambda: shown.append(True))
     monkeypatch.setenv(updater.ENV_HOME, str(tmp_path / "home"))
     assert launch.main() == 1
-    assert "none of your photos were lost" in capsys.readouterr().err
+    assert shown == [True]
+    assert "none of your photos were lost" in launch._CRASH_MESSAGE
