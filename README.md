@@ -70,6 +70,8 @@ python -m photo_organizer.testdrive check test-drives/one --phase after-edit
 | `system.py` | Lock, finding the drive, macOS dialogs |
 | `run.py` | One run, wrapped so errors become a friendly dialog |
 | `testdrive/` | Fake-drive generator and checker |
+| `app_shell/` (separate package) | The fixed app shell: checks GitHub Releases for newer sorting code and runs it |
+| `packaging/make_code_zip.py` | Builds the code-only update attached to each release |
 
 ## Build and release (GitHub Actions)
 
@@ -77,7 +79,7 @@ python -m photo_organizer.testdrive check test-drives/one --phase after-edit
 
 - **Every push and PR:** tests on macOS and Windows, plus the full test drive (both phases, second-run checks, a 500-photo import).
 - **On `main`, `v*` tags, and manual runs:** builds `Organize photos.app` on Apple Silicon with PyInstaller (`--onedir`, windowed, from `packaging/organize_photos.spec`). It checks the binary is arm64, verifies the ad-hoc signature with `codesign --verify --deep --strict`, runs the full test drive with the built app, zips it with `ditto -c -k --keepParent`, and uploads the zip as a workflow artifact.
-- **On a `v*` tag:** also attaches the zip to a GitHub Release.
+- **On a `v*` tag:** checks the tag matches `__version__`, then publishes a GitHub Release with the app zip and the code-only update (`photo_organizer-code.zip` + `.sha256`).
 
 To release: bump `__version__` in `photo_organizer/__init__.py`, then `git tag v0.1.0 && git push --tags`.
 
@@ -90,6 +92,36 @@ To release: bump `__version__` in `photo_organizer/__init__.py`, then `git tag v
 - **The drive must be APFS.** On exFAT, links can't be made, so the app still sorts by date, skips the link folders, and logs a warning.
 - **Deleted links or label folders come back** on the next run (v1 behavior). The photos are safe in By date either way. To really remove a photo, delete it from By date.
 - **Dragging a real photo into a view folder** (e.g. `By event/Hawaii 2026`) labels it. If it came from By date, it's moved back there. A copy of a photo that's already in My photos goes to Duplicates. A new photo is imported normally.
+
+## Remote updates (fixing things from far away)
+
+The app is a fixed **shell** (`app_shell/`) around the **sorting code** (`photo_organizer/`). Each time she opens the app, the shell asks GitHub for the latest published release. If that release is newer than the code it has, the shell downloads `photo_organizer-code.zip` (a few hundred KB), checks it against `photo_organizer-code.zip.sha256`, and runs it.
+
+- **Only published releases count.** Ordinary pushes, drafts, and pre-releases are never sent to her.
+- **The app never changes,** so macOS doesn't ask her to "Allow" the drive again after an update.
+- **Offline, GitHub down, a bad checksum:** it quietly runs the newest code it already has.
+- **Downloaded code that won't even start** (e.g. an import error) is marked bad. It then tries the previous download, then the code built into the app. A later, fixed release is picked up normally.
+- **Downloads live in** `~/Library/Application Support/Organize photos/` (`code/`, `state.json`, and `updates.log`). Each run log on the drive also says which code ran, e.g. `Code: 0.1.1 (update)`.
+
+**What a code update can't change** (these need a new app, installed by hand or over remote desktop): the shell itself, the bundled libraries (Pillow, pillow-heif) and Python 3.12, and the app's name, icon, and permissions text. Code that needs a newer shell sets `REQUIRES_SHELL` in `photo_organizer/__init__.py` and is never installed by older apps.
+
+**Turning updates off:** set `ORGANIZE_PHOTOS_NO_UPDATE=1`. CI does this to test the code inside each build. `ORGANIZE_PHOTOS_UPDATE_SOURCE` and `ORGANIZE_PHOTOS_HOME` point the shell at a local test release (`python packaging/make_code_zip.py --local-release`).
+
+### Releasing a fix (this sends it to her Mac)
+
+1. Fix the bug, and make sure `pytest` and the test drive pass.
+2. Bump `__version__` in `photo_organizer/__init__.py`, e.g. `0.1.0` → `0.1.1`.
+3. Commit and push, then wait for CI to go green.
+4. Tag it and push the tag:
+   ```
+   git tag v0.1.1
+   git push origin v0.1.1
+   ```
+   CI builds the app, checks the tag matches `__version__`, and publishes the release with the app zip and the code update. Her app picks it up the next time she opens it.
+
+To try a release yourself first, mark it as a **pre-release** on GitHub. The app ignores pre-releases until you untick that box.
+
+Release downloads never expire, unlike workflow artifacts, which last 30 days.
 
 ## Logs and recovery
 

@@ -199,6 +199,8 @@ def run(drive_root: str | None, ui, dry_run: bool = False, verbose: bool = False
         drive = Drive(drive_root)
         log_path = _setup_logging(drive, verbose, dry_run)
         log.info("%s %s on %s (dry run: %s)", names.APP_NAME, __version__, drive.root, dry_run)
+        if os.environ.get("ORGANIZE_PHOTOS_CODE"):
+            log.info("Code: %s", os.environ["ORGANIZE_PHOTOS_CODE"])
 
         lock = RunLock(drive.lock)
         if not dry_run:

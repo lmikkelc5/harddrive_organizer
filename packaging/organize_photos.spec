@@ -6,7 +6,7 @@
 import os
 import re
 
-from PyInstaller.utils.hooks import collect_all, collect_data_files
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 with open(os.path.join(ROOT, "photo_organizer", "__init__.py"), encoding="utf-8") as f:
@@ -18,6 +18,16 @@ datas += d
 binaries += b
 hiddenimports += h
 datas += collect_data_files("tzdata")
+
+# The shell loads the sorting code by name at runtime, so list it explicitly
+# (the test-drive tools aren't needed in the app).
+hiddenimports += collect_submodules("photo_organizer", filter=lambda m: ".testdrive" not in m)
+hiddenimports += collect_submodules("app_shell")
+# Standard-library modules a future remote code update might reasonably use.
+# Remote updates can't add modules to the app, so bundle a few spares now.
+hiddenimports += ["csv", "difflib", "fnmatch", "glob", "gzip", "heapq", "html", "plistlib",
+                  "shlex", "statistics", "tempfile", "textwrap", "unicodedata", "uuid",
+                  "urllib.parse", "xml.etree.ElementTree", "zipfile", "zoneinfo"]
 
 a = Analysis(
     [os.path.join(SPECPATH, "launcher.py")],

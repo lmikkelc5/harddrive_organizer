@@ -63,7 +63,29 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "dist/Organize photos.app"
 
       - name: Full test drive with the built app
+        env:
+          ORGANIZE_PHOTOS_NO_UPDATE: "1"   # test the code inside this build, not the latest release
         run: python -m photo_organizer.testdrive full "$RUNNER_TEMP/appdrive" --app "dist/Organize photos.app/Contents/MacOS/Organize photos"
+
+      - name: Remote update smoke test (good update, then a broken one)
+        run: |
+          APP="dist/Organize photos.app/Contents/MacOS/Organize photos"
+          export ORGANIZE_PHOTOS_HOME="$RUNNER_TEMP/shellhome"
+          DRIVE="$RUNNER_TEMP/updrive"
+          mkdir -p "$DRIVE/Put new photos here"
+
+          # A newer release: the app must download it and run it.
+          python packaging/make_code_zip.py --out "$RUNNER_TEMP/rel1" --version 9.9.9 --local-release
+          ORGANIZE_PHOTOS_UPDATE_SOURCE="file://$RUNNER_TEMP/rel1/latest.json" "$APP" --drive "$DRIVE"
+          grep -h "Code: 9.9.9 (update)" "$DRIVE"/.photo-organizer/logs/run-*.log
+
+          # A broken release: the app must fall back and keep working.
+          rm -f "$DRIVE"/.photo-organizer/logs/run-*.log
+          python packaging/make_code_zip.py --out "$RUNNER_TEMP/rel2" --version 9.9.10 --local-release --broken
+          ORGANIZE_PHOTOS_UPDATE_SOURCE="file://$RUNNER_TEMP/rel2/latest.json" "$APP" --drive "$DRIVE"
+          grep -h "Code: 9.9.9 (update)" "$DRIVE"/.photo-organizer/logs/run-*.log
+          grep -q '"9.9.10"' "$ORGANIZE_PHOTOS_HOME/state.json"
+          cat "$ORGANIZE_PHOTOS_HOME/updates.log"
 
       - name: Zip (ditto keeps the .app bundle intact)
         run: |
@@ -77,10 +99,15 @@ jobs:
           path: ${{ env.ZIP }}
           retention-days: 30
 
-      - name: Attach to GitHub Release
+      - name: Publish GitHub Release (app + code-only update)
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION=$(python -c "import photo_organizer; print(photo_organizer.__version__)")
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match __version__ $VERSION"; exit 1
+          fi
+          python packaging/make_code_zip.py --out release
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Organize photos $GITHUB_REF_NAME"
-          gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber
+          gh release upload "$GITHUB_REF_NAME" "$ZIP" release/photo_organizer-code.zip release/photo_organizer-code.zip.sha256 --clobber
